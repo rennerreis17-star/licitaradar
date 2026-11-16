@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LicitaRadar — Painel de Licitações</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f4f6fa; --card:#ffffff; --ink:#0f1b2d; --muted:#5b6b82; --line:#e3e8f0;
+  --nav:#0b1f3a; --nav2:#12305a; --accent:#0e9f6e; --accent2:#0b7f58; --blue:#2563eb;
+  --warn:#d97706; --bad:#dc2626; --ok:#059669; --chip:#eef2f8; --shadow:0 1px 2px rgba(15,27,45,.06),0 4px 16px rgba(15,27,45,.05);
+  --r:14px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink);font-size:14.5px;line-height:1.5}
+a{color:var(--blue)}
+.app{display:flex;min-height:100vh}
+/* Sidebar */
+.side{width:248px;flex-shrink:0;background:linear-gradient(180deg,var(--nav),var(--nav2));color:#dbe6f5;padding:22px 14px;position:sticky;top:0;height:100vh;display:flex;flex-direction:column;gap:4px}
+.brand{display:flex;align-items:center;gap:10px;padding:4px 10px 20px;color:#fff;font-weight:800;font-size:18px;letter-spacing:-.3px}
+.brand .logo{width:34px;height:34px;border-radius:10px;background:var(--accent);display:grid;place-items:center}
+.brand small{display:block;font-weight:500;font-size:11px;color:#9fb3cf;letter-spacing:0}
+.nav a{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;color:#c9d6ea;text-decoration:none;font-weight:500;cursor:pointer;white-space:nowrap}
+.nav a:hover{background:rgba(255,255,255,.07);color:#fff}
+.nav a.on{background:rgba(14,159,110,.18);color:#fff;box-shadow:inset 3px 0 0 var(--accent)}
+.nav svg{width:18px;height:18px;flex-shrink:0}
+.side .foot{margin-top:auto;font-size:11.5px;color:#8ea4c4;padding:10px}
+.side .foot b{color:#cfe0f5}
+/* Main */
+main{flex:1;min-width:0;padding:26px 32px 60px}
+.top{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:22px;flex-wrap:wrap}
+.top h1{font-size:24px;margin:0;letter-spacing:-.4px}
+.top p{margin:3px 0 0;color:var(--muted)}
+.grid{display:grid;gap:16px}
+.g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px;box-shadow:var(--shadow);min-width:0}
+.card h2{font-size:15.5px;margin:0 0 12px;display:flex;align-items:center;gap:8px;justify-content:space-between}
+.card h3{font-size:14px;margin:16px 0 8px}
+.kpi .lbl{color:var(--muted);font-size:12.5px;font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+.kpi .val{font-size:30px;font-weight:800;letter-spacing:-.8px;margin-top:4px}
+.kpi .sub{font-size:12.5px;color:var(--muted)}
+.muted{color:var(--muted)}
+.small{font-size:12.5px}
+label{display:block;font-size:12.5px;font-weight:600;color:var(--muted);margin:10px 0 5px}
+input,select,textarea{width:100%;font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#fbfcfe;color:var(--ink);outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(14,159,110,.15);background:#fff}
+textarea{min-height:120px;resize:vertical}
+.row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
+.row>*{flex:1;min-width:140px}
+.row>.fit{flex:0 0 auto;min-width:0}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 16px;border-radius:10px;border:1px solid transparent;background:var(--accent);color:#fff;font:inherit;font-weight:600;cursor:pointer;white-space:nowrap;text-decoration:none}
+.btn:hover{background:var(--accent2)}
+.btn.sec{background:#fff;color:var(--ink);border-color:var(--line)}
+.btn.sec:hover{background:var(--chip)}
+.btn.ghost{background:transparent;color:var(--muted);padding:6px 10px}
+.btn.ghost:hover{background:var(--chip);color:var(--ink)}
+.btn.danger{background:#fff;color:var(--bad);border-color:#f3c9c9}
+.btn.sm{padding:6px 11px;font-size:13px;border-radius:8px}
+.btn:disabled{opacity:.55;cursor:wait}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;background:var(--chip);font-size:12px;font-weight:600;color:#334760;white-space:nowrap}
+.chip.ok{background:#dcfce7;color:#166534}.chip.bad{background:#fee2e2;color:#991b1b}.chip.warn{background:#fef3c7;color:#92400e}.chip.blue{background:#dbeafe;color:#1e40af}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{text-align:left;font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:700;padding:8px 10px;border-bottom:1px solid var(--line);background:#f8fafc}
+td{padding:10px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:12px}
+.empty{padding:26px;text-align:center;color:var(--muted);border:1.5px dashed var(--line);border-radius:12px;background:#fbfcfe}
+.list .it{padding:12px 0;border-bottom:1px solid var(--line);display:flex;gap:12px;justify-content:space-between;align-items:flex-start}
+.list .it:last-child{border-bottom:0}
+.it .t{font-weight:600}
+.dl{display:grid;grid-template-columns:150px 1fr;gap:6px 14px;font-size:13.5px}
+.dl dt{color:var(--muted);font-weight:600}
+.dl dd{margin:0;word-break:break-word}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.tabs button{border:1px solid var(--line);background:#fff;padding:8px 14px;border-radius:999px;font:inherit;font-weight:600;cursor:pointer;color:var(--muted)}
+.tabs button.on{background:var(--nav);color:#fff;border-color:var(--nav)}
+.flag{display:flex;gap:10px;padding:10px 12px;border-radius:10px;margin:6px 0;font-size:13.5px}
+.flag.bad{background:#fef2f2;border:1px solid #fecaca}.flag.warn{background:#fffbeb;border:1px solid #fde68a}.flag.ok{background:#f0fdf4;border:1px solid #bbf7d0}.flag.info{background:#eff6ff;border:1px solid #bfdbfe}
+.md{font-size:14px;line-height:1.6}
+.md h1,.md h2,.md h3,.md h4{margin:18px 0 8px;line-height:1.3}
+.md h1{font-size:20px}.md h2{font-size:17px}.md h3{font-size:15px}
+.md table{margin:10px 0;border:1px solid var(--line)}
+.md td,.md th{border:1px solid var(--line)}
+.md blockquote{margin:8px 0;padding:8px 14px;border-left:3px solid var(--accent);background:#f6fbf9}
+.md code{background:var(--chip);padding:1px 5px;border-radius:5px;font-size:12.5px}
+.out{border:1px solid var(--line);border-radius:12px;padding:16px 18px;background:#fff;max-height:none}
+.drop{border:1.5px dashed #b9c6d8;border-radius:12px;padding:16px;text-align:center;background:#fbfcfe;cursor:pointer}
+.drop:hover{border-color:var(--accent);background:#f3fbf8}
+.progress{height:6px;background:var(--chip);border-radius:9px;overflow:hidden;margin-top:10px}
+.progress i{display:block;height:100%;background:var(--accent);width:0;transition:width .3s}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#0f1b2d;color:#fff;padding:11px 18px;border-radius:12px;font-weight:500;z-index:99;box-shadow:0 8px 30px rgba(0,0,0,.25);max-width:92vw}
+.modal-bg{position:fixed;inset:0;background:rgba(10,20,35,.5);display:grid;place-items:center;z-index:90;padding:16px}
+.modal{background:#fff;border-radius:16px;padding:22px;width:min(720px,100%);max-height:88vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.modal h2{margin:0 0 10px;font-size:18px}
+.right{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:16px}
+.score{font-weight:800;font-size:12px;padding:3px 8px;border-radius:7px}
+.spin{width:16px;height:16px;border:2.5px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:sp .8s linear infinite;display:inline-block}
+.btn.sec .spin{border-color:rgba(0,0,0,.15);border-top-color:var(--ink)}
+@keyframes sp{to{transform:rotate(360deg)}}
+.banner{display:flex;gap:12px;align-items:flex-start;padding:12px 16px;border-radius:12px;background:#eff6ff;border:1px solid #bfdbfe;margin-bottom:18px;font-size:13.5px}
+.pill-status{font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px}
+.stack>*+*{margin-top:16px}
+.hide{display:none!important}
+@media (max-width:1100px){.g4{grid-template-columns:repeat(2,minmax(0,1fr))}.g3{grid-template-columns:1fr 1fr}}
+@media (max-width:860px){
+  .app{flex-direction:column}
+  .side{width:auto;height:auto;position:sticky;top:0;z-index:20;flex-direction:row;align-items:center;padding:8px 10px;overflow-x:auto;gap:2px}
+  .brand{padding:0 8px 0 2px}.brand small,.brand span.nm{display:none}
+  .nav{display:flex;gap:2px}.nav a{padding:8px 10px;font-size:13px}.nav a span{display:none}.nav a.on span{display:inline}
+  .side .foot{display:none}
+  main{padding:18px 14px 50px}
+  .g3,.g2{grid-template-columns:1fr}
+  .g4{grid-template-columns:1fr 1fr;gap:10px}.kpi .val{font-size:24px}.card.kpi{padding:14px}
+  .dl{grid-template-columns:1fr}.dl dt{margin-top:6px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand"><div class="logo"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/><path d="M8 11l2 2 4-4"/></svg></div><div><span class="nm">LicitaRadar</span><small>Licitações · Lei 14.133/2021</small></div></div>
+    <nav class="nav" id="nav"></nav>
+    <div class="foot">Dados salvos <b>neste navegador</b>.<br>Faça backup em Configurações.</div>
+  </aside>
+  <main id="main"></main>
+</div>
+<div id="layer"></div>
+
+<script>
+/* =========================================================
+   LicitaRadar — painel de licitações (arquivo único)
+   Fontes: BrasilAPI / Minha Receita / CNPJ.ws (dados abertos da Receita Federal)
+           PNCP — API de Consultas (pncp.gov.br/api/consulta)
+   ========================================================= */
+const VERSAO = "1.0";
+const STORE_KEY = "licitaradar_v1";
+
+/* ---------------- Estado ---------------- */
+const vazio = () => ({
+  empresa:{cnpj:"",dados:null,palavras:"",docs:[],atestados:[],fin:{pl:"",capital:"",lg:"",sg:"",lc:"",faturamento:""},registros:"",obs:""},
+  licitacoes:[], concorrentes:[], radar:{palavras:"",uf:"",modalidade:"6",dias:"30",paginas:"3",ultimos:[]}
+});
+let S = vazio();
+try{ const raw = localStorage.getItem(STORE_KEY); if(raw) S = Object.assign(vazio(), JSON.parse(raw)); }catch(e){}
+function salvar(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(S)); }catch(e){ toast("Não consegui salvar neste navegador — faça backup em Configurações."); } }
+
+let sampleFn = null;
+(async()=>{ try{ if(window.claude && window.claude.use){ sampleFn = await window.claude.use("sample"); if(sampleFn) render(); } }catch(e){} })();
+
+/* ---------------- Utilidades ---------------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const uid = () => Math.random().toString(36).slice(2,10);
+const soDig = s => String(s||"").replace(/\D/g,"");
+function fmtCNPJ(c){ c=soDig(c).padStart(14,"0"); return c.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/,"$1.$2.$3/$4-$5"); }
+function cnpjValido(c){
+  c=soDig(c); if(c.length!==14 || /^(\d)\1+$/.test(c)) return false;
+  const calc = n => { let s=0,p=n-7; for(let i=0;i<n;i++){ s+= +c[i]*p--; if(p<2)p=9; } const r=s%11; return r<2?0:11-r; };
+  return calc(12)===+c[12] && calc(13)===+c[13];
+}
+const brl = v => (v===null||v===undefined||v==="")?"—":Number(v).toLocaleString("pt-BR",{style:"currency",currency:"BRL",maximumFractionDigits:2});
+function fmtData(d){ if(!d) return "—"; const x=new Date(d); if(isNaN(x)) return String(d); return x.toLocaleDateString("pt-BR"); }
+function fmtDataHora(d){ if(!d) return "—"; const x=new Date(d); if(isNaN(x)) return String(d); return x.toLocaleString("pt-BR",{dateStyle:"short",timeStyle:"short"}); }
+function diasAte(d){ if(!d) return null; const x=new Date(d); if(isNaN(x)) return null; const h=new Date(); h.setHours(0,0,0,0); const y=new Date(x); y.setHours(0,0,0,0); return Math.round((y-h)/864e5); }
+function semAcento(s){ return String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase(); }
+const STOP = new Set("para com sem sobre entre pela pelo pelos pelas este esta esse essa como mais menos todo toda todos todas outros outras outro outra demais servicos servico aquisicao contratacao empresa especializada fornecimento eventual futura registro precos preco item itens lote lotes atender necessidades conforme termo referencia edital anexo municipio municipal estado estadual secretaria prefeitura atraves demanda forma objeto destinados destinado destinadas visando visto quando onde cujo cuja suas seus pelo nao".split(" "));
+function tokens(s){ return semAcento(s).split(/[^a-z0-9]+/).filter(w=>w.length>=4 && !STOP.has(w)); }
+function raiz(w){ return w.length>6 ? w.slice(0,6) : w; }
+function toast(msg,ms=3200){ const t=document.createElement("div"); t.className="toast"; t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),ms); }
+function modal(html,onMount){ const l=$("#layer"); l.innerHTML=`<div class="modal-bg"><div class="modal">${html}</div></div>`; l.querySelector(".modal-bg").addEventListener("click",e=>{ if(e.target.classList.contains("modal-bg")) fecharModal(); }); onMount && onMount(l.querySelector(".modal")); }
+function fecharModal(){ $("#layer").innerHTML=""; }
+function confirmar(msg, ok){ modal(`<h2>Confirmar</h2><p>${esc(msg)}</p><div class="right"><button class="btn sec" onclick="fecharModal()">Cancelar</button><button class="btn danger" id="cOk">Confirmar</button></div>`, m=>m.querySelector("#cOk").onclick=()=>{fecharModal();ok();}); }
+async function copiar(texto){
+  try{ await navigator.clipboard.writeText(texto); toast("Copiado ✔"); return true; }
+  catch(e){ const ta=document.createElement("textarea"); ta.value=texto; ta.style.position="fixed"; ta.style.opacity="0"; document.body.appendChild(ta); ta.select(); let ok=false; try{ ok=document.execCommand("copy"); }catch(_){} ta.remove(); toast(ok?"Copiado ✔":"Não consegui copiar automaticamente — selecione o texto e copie."); return ok; }
+}
+let dlFn=null;
+(async()=>{ try{ if(window.claude && window.claude.use){ dlFn = await window.claude.use("downloads"); } }catch(e){} })();
+async function baixar(nome, conteudo, tipo){
+  if(dlFn){
+    try{ await dlFn.save({filename:nome,data:conteudo}); return; }
+    catch(e){ try{ await dlFn.save({filename:nome,data:new Blob([conteudo],{type:tipo})}); return; }catch(e2){ toast("Download não autorizado — use o botão Copiar."); return; } }
+  }
+  try{ const b=new Blob([conteudo],{type:tipo}); const a=document.createElement("a"); a.href=URL.createObjectURL(b); a.download=nome; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500); toast("Download iniciado. Se nada aconteceu, use o botão Copiar."); }
+  catch(e){ toast("Download bloqueado aqui — use Copiar."); }
+}
+async function fetchJSON(url, ms=45000){
+  const ctl=new AbortController(); const t=setTimeout(()=>ctl.abort(),ms);
+  try{ const r=await fetch(url,{signal:ctl.signal,headers:{accept:"application/json"}}); clearTimeout(t);
+    if(r.status===204) return {__vazio:true};
+    if(!r.ok){ const e=new Error("HTTP "+r.status); e.status=r.status; throw e; }
+    return await r.json();
+  }catch(e){ clearTimeout(t); throw e; }
+}
+
+/* ---------------- CNPJ (dados abertos da Receita Federal) ---------------- */
+function normBrasilAPI(d,fonte){
+  const end=[d.descricao_tipo_de_logradouro,d.logradouro,d.numero,d.complemento,d.bairro].filter(Boolean).join(", ");
+  return {
+    cnpj:soDig(d.cnpj), razao:d.razao_social||"", fantasia:d.nome_fantasia||"",
+    situacao:d.descricao_situacao_cadastral||d.situacao_cadastral||"", dataSituacao:d.data_situacao_cadastral||"",
+    motivoSituacao:d.descricao_motivo_situacao_cadastral||"", situacaoEspecial:d.situacao_especial||"",
+    abertura:d.data_inicio_atividade||"", natureza:d.natureza_juridica||"", porte:d.porte||d.descricao_porte||"",
+    capital:Number(d.capital_social)||0, simples:d.opcao_pelo_simples, mei:d.opcao_pelo_mei,
+    cnaePrincipal:{codigo:String(d.cnae_fiscal||""),descricao:d.cnae_fiscal_descricao||""},
+    cnaesSec:(d.cnaes_secundarios||[]).filter(x=>x && x.codigo).map(x=>({codigo:String(x.codigo),descricao:x.descricao||""})),
+    endereco:end, municipio:d.municipio||"", uf:d.uf||"", cep:d.cep||"",
+    telefone:[d.ddd_telefone_1,d.ddd_telefone_2].filter(Boolean).join(" / "), email:d.email||"",
+    socios:(d.qsa||[]).map(s=>({nome:s.nome_socio||s.nome||"",qualificacao:s.qualificacao_socio||"",doc:s.cnpj_cpf_do_socio||"",entrada:s.data_entrada_sociedade||""})),
+    fonte, consultadoEm:new Date().toISOString()
+  };
+}
+function normCnpjWs(d){
+  const e=d.estabelecimento||{}; const ap=e.atividade_principal||{};
+  return {
+    cnpj:soDig(e.cnpj||""), razao:d.razao_social||"", fantasia:e.nome_fantasia||"",
+    situacao:e.situacao_cadastral||"", dataSituacao:e.data_situacao_cadastral||"", motivoSituacao:(e.motivo_situacao_cadastral||{}).descricao||"", situacaoEspecial:e.situacao_especial||"",
+    abertura:e.data_inicio_atividade||"", natureza:(d.natureza_juridica||{}).descricao||"", porte:(d.porte||{}).descricao||"",
+    capital:Number(d.capital_social)||0, simples:d.simples?d.simples.simples==="Sim":null, mei:d.simples?d.simples.mei==="Sim":null,
+    cnaePrincipal:{codigo:String(ap.subclasse||ap.id||""),descricao:ap.descricao||""},
+    cnaesSec:(e.atividades_secundarias||[]).map(x=>({codigo:String(x.subclasse||x.id||""),descricao:x.descricao||""})),
+    endereco:[e.tipo_logradouro,e.logradouro,e.numero,e.complemento,e.bairro].filter(Boolean).join(", "),
+    municipio:(e.cidade||{}).nome||"", uf:(e.estado||{}).sigla||"", cep:e.cep||"",
+    telefone:[e.ddd1&&e.telefone1?e.ddd1+e.telefone1:"",e.ddd2&&e.telefone2?e.ddd2+e.telefone2:""].filter(Boolean).join(" / "), email:e.email||"",
+    socios:(d.socios||[]).map(s=>({nome:s.nome||"",qualificacao:(s.qualificacao_socio||{}).descricao||"",doc:s.cpf_cnpj_socio||"",entrada:s.data_entrada||""})),
+    fonte:"CNPJ.ws", consultadoEm:new Date().toISOString()
+  };
+}
+async function consultarCNPJ(cnpj){
+  cnpj=soDig(cnpj);
+  const fontes=[
+    ["BrasilAPI", ()=>fetchJSON(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`,20000).then(d=>normBrasilAPI(d,"BrasilAPI"))],
+    ["Minha Receita", ()=>fetchJSON(`https://minhareceita.org/${cnpj}`,20000).then(d=>normBrasilAPI(d,"Minha Receita"))],
+    ["CNPJ.ws", ()=>fetchJSON(`https://publica.cnpj.ws/cnpj/${cnpj}`,20000).then(normCnpjWs)]
+  ];
+  const erros=[];
+  for(const [nome,fn] of fontes){
+    try{ const r=await fn(); if(r && r.razao) return r; erros.push(nome+": vazio"); }
+    catch(e){ if(e.status===404) throw new Error("CNPJ não encontrado na base da Receita."); erros.push(nome+": "+(e.message||"falhou")); }
+  }
+  const err=new Error("bloqueado"); err.detalhes=erros; throw err;
+}
+function avisoSemRede(){
+  return `<div class="flag warn"><div>⚠️</div><div><b>Não consegui acessar a internet a partir desta página.</b><br>
+  Se você está vendo o painel dentro do Claude, a consulta automática fica bloqueada por segurança.
+  Use a versão <b>baixada</b> (arquivo .html aberto no navegador do computador) — lá a busca de CNPJ e do PNCP funciona.
+  Enquanto isso, você pode preencher os dados manualmente.</div></div>`;
+}
+
+/* ---------------- Alertas de flags (concorrentes) ---------------- */
+function anosDesde(d){ const x=new Date(d); if(isNaN(x)) return null; return (Date.now()-x)/(365.25*864e5); }
+function flagsEmpresa(d, objetoRef){
+  const f=[];
+  if(!d) return f;
+  if(d.situacao && !/ativa/i.test(d.situacao)) f.push(["bad",`Situação cadastral: <b>${esc(d.situacao)}</b>${d.motivoSituacao?" ("+esc(d.motivoSituacao)+")":""}. Empresa não ativa não pode ser habilitada.`]);
+  if(d.situacaoEspecial) f.push(["bad",`Situação especial na Receita: <b>${esc(d.situacaoEspecial)}</b> (ex.: recuperação judicial/falência). Conferir a certidão de falência exigida no edital.`]);
+  const a=anosDesde(d.abertura);
+  if(a!==null && a<1) f.push(["warn",`Empresa aberta há menos de 1 ano (${fmtData(d.abertura)}). Verifique se apresentou balanço válido (art. 69 §6º permite balanço de abertura) e se os atestados técnicos são compatíveis com tão pouco tempo.`]);
+  if(d.mei===true) f.push(["warn","Empresa é <b>MEI</b>. Conferir limites de faturamento, capacidade operacional e se o objeto é compatível."]);
+  if(/micro|pequeno|epp|me\b/i.test(d.porte||"")) f.push(["info",`Porte declarado na Receita: <b>${esc(d.porte)}</b>. Se usou benefício ME/EPP (LC 123), vale checar se o faturamento do ano não ultrapassou o limite (art. 4º §§2º-3º da Lei 14.133).`]);
+  if(objetoRef){
+    const sc=compatCNAE(objetoRef,d);
+    if(sc.nivel==="Baixa") f.push(["warn",`CNAEs com <b>baixa aderência</b> ao objeto informado. Conferir se o objeto social (contrato social) é compatível com o objeto da licitação — habilitação jurídica.`]);
+    else f.push(["ok",`CNAEs com aderência <b>${sc.nivel.toLowerCase()}</b> ao objeto (${sc.pts} termos em comum).`]);
+  }
+  if(d.capital!==undefined && d.capital!==null) f.push(["info",`Capital social: <b>${brl(d.capital)}</b>. Se o edital exige capital mínimo ou PL (até 10% do valor estimado — art. 69 §4º), compare.`]);
+  return f;
+}
+function compatCNAE(objeto, d, palavrasExtra=""){
+  const obj=new Set(tokens(objeto).map(raiz));
+  const base=[d?.cnaePrincipal?.descricao, ...(d?.cnaesSec||[]).map(c=>c.descricao)].join(" ");
+  const tk=new Set(tokens(base).map(raiz));
+  const extra=new Set(tokens(palavrasExtra).map(raiz));
+  let pts=0; const hits=[];
+  obj.forEach(w=>{ if(extra.has(w)){pts+=2;hits.push(w);} else if(tk.has(w)){pts+=1;hits.push(w);} });
+  const nivel = pts>=4?"Alta":pts>=2?"Média":"Baixa";
+  return {pts,nivel,hits};
+}
+function sociosEmComum(){
+  const mapa={};
+  S.concorrentes.forEach(c=>(c.dados?.socios||[]).forEach(s=>{ const k=semAcento(s.nome).trim(); if(!k) return; (mapa[k]=mapa[k]||{nome:s.nome,emp:new Set()}).emp.add(c.dados.razao); }));
+  if(S.empresa.dados) (S.empresa.dados.socios||[]).forEach(s=>{ const k=semAcento(s.nome).trim(); if(mapa[k]) mapa[k].emp.add("(sua empresa)"); });
+  return Object.values(mapa).filter(x=>x.emp.size>1).map(x=>({nome:x.nome,empresas:[...x.emp]}));
+}
+
+/* ---------------- PNCP ---------------- */
+const MODALIDADES={"":"Todas","6":"Pregão Eletrônico","4":"Concorrência Eletrônica","8":"Dispensa de Licitação","7":"Pregão Presencial","5":"Concorrência Presencial","12":"Credenciamento","9":"Inexigibilidade","1":"Leilão Eletrônico","13":"Leilão Presencial","3":"Concurso","2":"Diálogo Competitivo","11":"Pré-qualificação","10":"Manifestação de Interesse"};
+const UFS="AC AL AM AP BA CE DF ES GO MA MG MS MT PA PB PE PI PR RJ RN RO RR RS SC SE SP TO".split(" ");
+function linkPNCP(x){ const c=x.orgaoEntidade?.cnpj, a=x.anoCompra, s=x.sequencialCompra; return (c&&a&&s)?`https://pncp.gov.br/app/editais/${c}/${a}/${s}`:(x.linkSistemaOrigem||"https://pncp.gov.br/app/editais"); }
+function normPNCP(x){
+  return { id:uid(), pncpId:x.numeroControlePNCP||"", objeto:x.objetoCompra||"", orgao:x.orgaoEntidade?.razaoSocial||"", orgaoCnpj:x.orgaoEntidade?.cnpj||"",
+    uf:x.unidadeOrgao?.ufSigla||"", municipio:x.unidadeOrgao?.municipioNome||"", valor:x.valorTotalEstimado??null,
+    modalidade:x.modalidadeNome||"", abertura:x.dataAberturaProposta||"", encerramento:x.dataEncerramentoProposta||"",
+    link:linkPNCP(x), linkOrigem:x.linkSistemaOrigem||"", processo:x.processo||"", numero:x.numeroCompra||"", srp:!!x.srp };
+}
+/* Base diária gerada pelo GitHub Actions (data/meta.json + data/uf/XX.json) */
+let META=null; const cacheUF={};
+async function carregarMeta(){ if(META!==null) return META; try{ const r=await fetch("data/meta.json",{cache:"no-store"}); if(!r.ok) throw 0; META=await r.json(); }catch(e){ META=false; } return META; }
+async function carregarUF(uf){
+  if(cacheUF[uf]) return cacheUF[uf];
+  try{ const r=await fetch(`data/uf/${uf}.json`,{cache:"no-cache"}); if(!r.ok) return []; const j=await r.json();
+    return cacheUF[uf]=j.map(x=>({id:uid(),pncpId:x.p,objeto:x.o||"",orgao:x.g||"",orgaoCnpj:x.c||"",uf:x.u||uf,municipio:x.m||"",valor:x.v??null,modalidade:x.md||"",mc:x.mc,abertura:x.a||"",encerramento:x.e||"",link:x.l||"",linkOrigem:x.lo||"",numero:x.n||"",srp:!!x.s}));
+  }catch(e){ return []; }
+}
+function ymd(d){ return d.toISOString().slice(0,10).replace(/-/g,""); }
+
+/* ---------------- Markdown simples ---------------- */
+function md(src){
+  const lines=String(src||"").replace(/\r/g,"").split("\n"); let out=[], i=0;
+  const inl=s=>esc(s).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/(^|[^*])\*([^*\n]+)\*/g,"$1<i>$2</i>").replace(/`([^`]+)`/g,"<code>$1</code>");
+  while(i<lines.length){
+    let l=lines[i];
+    if(/^\s*\|.*\|\s*$/.test(l) && i+1<lines.length && /^\s*\|?\s*:?-{2,}/.test(lines[i+1])){
+      const row=r=>r.trim().replace(/^\||\|$/g,"").split("|").map(c=>c.trim());
+      const head=row(l); i+=2; const body=[];
+      while(i<lines.length && /^\s*\|.*\|\s*$/.test(lines[i])){ body.push(row(lines[i])); i++; }
+      out.push(`<div class="tbl"><table><thead><tr>${head.map(h=>`<th>${inl(h)}</th>`).join("")}</tr></thead><tbody>${body.map(r=>`<tr>${r.map(c=>`<td>${inl(c)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`); continue;
+    }
+    let m;
+    if((m=l.match(/^(#{1,4})\s+(.*)/))){ out.push(`<h${m[1].length}>${inl(m[2])}</h${m[1].length}>`); i++; continue; }
+    if(/^\s*(-{3,}|\*{3,})\s*$/.test(l)){ out.push("<hr>"); i++; continue; }
+    if(/^\s*>\s?/.test(l)){ const b=[]; while(i<lines.length && /^\s*>\s?/.test(lines[i])){ b.push(lines[i].replace(/^\s*>\s?/,"")); i++; } out.push(`<blockquote>${b.map(inl).join("<br>")}</blockquote>`); continue; }
+    if(/^\s*[-*•]\s+/.test(l)){ const b=[]; while(i<lines.length && /^\s*[-*•]\s+/.test(lines[i])){ b.push(lines[i].replace(/^\s*[-*•]\s+/,"")); i++; } out.push(`<ul>${b.map(x=>`<li>${inl(x)}</li>`).join("")}</ul>`); continue; }
+    if(/^\s*\d+[.)]\s+/.test(l)){ const b=[]; while(i<lines.length && /^\s*\d+[.)]\s+/.test(lines[i])){ b.push(lines[i].replace(/^\s*\d+[.)]\s+/,"")); i++; } out.push(`<ol>${b.map(x=>`<li>${inl(x)}</li>`).join("")}</ol>`); continue; }
+    if(!l.trim()){ i++; continue; }
+    const p=[]; while(i<lines.length && lines[i].trim() && !/^(#{1,4}\s|\s*[-*•]\s|\s*\d+[.)]\s|\s*>|\s*\|)/.test(lines[i])){ p.push(lines[i]); i++; }
+    if(p.length) out.push(`<p>${p.map(inl).join("<br>")}</p>`); else { out.push(`<p>${inl(l)}</p>`); i++; }
+  }
+  return out.join("\n");
+}
+
+/* ---------------- PDF → texto ---------------- */
+let pdfPronto=null;
+function carregarPDFjs(){
+  if(pdfPronto) return pdfPronto;
+  const add=src=>new Promise((ok,err)=>{ const s=document.createElement("script"); s.src=src; s.onload=ok; s.onerror=()=>err(new Error("Falha ao carregar leitor de PDF")); document.head.appendChild(s); });
+  const base="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/";
+  pdfPronto = add(base+"pdf.min.js").then(()=>add(base+"pdf.worker.min.js")).then(()=>{ window.pdfjsLib.GlobalWorkerOptions.workerSrc=base+"pdf.worker.min.js"; });
+  return pdfPronto;
+}
+async function lerArquivo(file, onProg){
+  if(/\.pdf$/i.test(file.name) || file.type==="application/pdf"){
+    await carregarPDFjs();
+    const buf=await file.arrayBuffer();
+    const pdf=await window.pdfjsLib.getDocument({data:buf}).promise;
+    let txt=""; for(let p=1;p<=pdf.numPages;p++){ const pg=await pdf.getPage(p); const c=await pg.getTextContent(); txt+=`\n\n[Página ${p}]\n`+c.items.map(it=>it.str+(it.hasEOL?"\n":" ")).join(""); onProg&&onProg(p,pdf.numPages); }
+    if(txt.replace(/\[Página \d+\]|\s/g,"").length<200) txt+="\n\n[AVISO: o PDF parece ser digitalizado (imagem). O texto pode estar incompleto — use um PDF pesquisável ou cole o texto.]";
+    return txt.trim();
+  }
+  return await file.text();
+}
+
+/* ---------------- Contexto e prompts ---------------- */
+function perfilEmpresaTexto(){
+  const e=S.empresa, d=e.dados||{};
+  const docs=e.docs.map(x=>`- ${x.nome}: validade ${x.validade?fmtData(x.validade):"não informada"}${x.obs?" ("+x.obs+")":""}`).join("\n")||"- (nenhum documento cadastrado)";
+  const at=e.atestados.map(x=>`- ${x.descricao}${x.quant?" | quantitativo: "+x.quant:""}${x.emitente?" | emitente: "+x.emitente:""}${x.ano?" | ano: "+x.ano:""}`).join("\n")||"- (nenhum atestado cadastrado)";
+  const f=e.fin;
+  return `PERFIL DA MINHA EMPRESA
+Razão social: ${d.razao||"(não informado)"} | CNPJ: ${e.cnpj?fmtCNPJ(e.cnpj):"(não informado)"}
+Situação cadastral: ${d.situacao||"?"} | Abertura: ${fmtData(d.abertura)} | Natureza: ${d.natureza||"?"} | Porte: ${d.porte||"?"} | Simples: ${d.simples===true?"sim":d.simples===false?"não":"?"} | MEI: ${d.mei===true?"sim":d.mei===false?"não":"?"}
+Endereço: ${d.endereco||""} — ${d.municipio||""}/${d.uf||""}
+Capital social (Receita): ${brl(d.capital)}
+CNAE principal: ${d.cnaePrincipal?d.cnaePrincipal.codigo+" - "+d.cnaePrincipal.descricao:"?"}
+CNAEs secundários: ${(d.cnaesSec||[]).map(c=>c.codigo+" - "+c.descricao).join("; ")||"nenhum"}
+Sócios/administradores: ${(d.socios||[]).map(s=>s.nome+" ("+s.qualificacao+")").join("; ")||"?"}
+Áreas de atuação / palavras-chave: ${e.palavras||"(não informado)"}
+Registros em conselhos/órgãos (CREA, CRA, CRF, ANVISA etc.): ${e.registros||"(não informado)"}
+Dados financeiros (último balanço): Patrimônio líquido ${f.pl?brl(f.pl):"?"} | Capital integralizado ${f.capital?brl(f.capital):"?"} | LG ${f.lg||"?"} | SG ${f.sg||"?"} | LC ${f.lc||"?"} | Faturamento anual ${f.faturamento?brl(f.faturamento):"?"}
+Documentos de habilitação e validade:
+${docs}
+Atestados de capacidade técnica:
+${at}
+Observações: ${e.obs||"-"}`;
+}
+function dadosConcorrenteTexto(c){
+  if(!c) return "(não informado)";
+  const d=c.dados||{};
+  return `Razão social: ${d.razao||"?"} | CNPJ: ${fmtCNPJ(c.cnpj)}
+Situação cadastral: ${d.situacao||"?"} ${d.motivoSituacao?"("+d.motivoSituacao+")":""} | Situação especial: ${d.situacaoEspecial||"nenhuma"}
+Abertura: ${fmtData(d.abertura)} | Porte: ${d.porte||"?"} | Simples: ${d.simples===true?"sim":d.simples===false?"não":"?"} | MEI: ${d.mei===true?"sim":d.mei===false?"não":"?"}
+Capital social: ${brl(d.capital)} | Natureza: ${d.natureza||"?"}
+CNAE principal: ${d.cnaePrincipal?d.cnaePrincipal.codigo+" - "+d.cnaePrincipal.descricao:"?"}
+CNAEs secundários: ${(d.cnaesSec||[]).map(x=>x.codigo+" - "+x.descricao).join("; ")||"nenhum"}
+Endereço: ${d.endereco||""} — ${d.municipio||""}/${d.uf||""}
+Sócios: ${(d.socios||[]).map(s=>s.nome+" ("+s.qualificacao+(s.entrada?", desde "+fmtData(s.entrada):"")+")").join("; ")||"?"}
+Anotações: ${c.notas||"-"}`;
+}
+const REGRAS_GERAIS = `REGRAS OBRIGATÓRIAS
+- Você é um consultor sênior em licitações públicas no Brasil (Lei 14.133/2021, LC 123/2006, jurisprudência do TCU). Se o edital ainda for regido pela Lei 8.666/93 ou 10.520/02, diga isso e adapte a fundamentação.
+- Trabalhe SOMENTE com o que está nos textos fornecidos. Nunca invente cláusulas, números de item, documentos ou fatos. Sempre cite o item/página do edital ("item 8.3.2, pág. 14").
+- Cite artigos de lei e acórdãos apenas quando tiver segurança. Se não tiver certeza do número exato, escreva "[conferir dispositivo]".
+- Tudo deve ser estritamente legal e de boa-fé: o objetivo é garantir a legalidade e a ampla competição, não procrastinar o certame. Aponte quando um argumento for fraco ou puder ser visto como protelatório.
+- Diferencie falhas INSANÁVEIS de falhas FORMAIS/SANÁVEIS por diligência (art. 64 da Lei 14.133; o TCU admite juntada de documento que comprove condição preexistente — Acórdão 1211/2021-Plenário).
+- Escreva em português do Brasil, de forma objetiva. Campos que dependem do usuário ficam como [PREENCHER].
+- Lembre ao final que a peça deve ser revisada por advogado ou pelo responsável antes do protocolo.`;
+
+function promptEnquadramento(edital, lic, json){
+  return `${REGRAS_GERAIS}
+
+TAREFA: ANÁLISE DE ENQUADRAMENTO (minha empresa consegue participar e ser habilitada?)
+1. Extraia do edital TODAS as condições de participação e exigências: habilitação jurídica, fiscal/social/trabalhista, econômico-financeira (índices, PL/capital mínimo, balanço), qualificação técnica (atestados, quantitativos, parcelas de maior relevância, registro em conselho, profissional responsável, visita técnica), proposta (amostra, catálogo, marca, planilha), garantia, exclusividade ME/EPP, vedação a consórcio, prazos.
+2. Compare cada exigência com o PERFIL DA MINHA EMPRESA. Se o perfil não traz a informação, o status é "verificar" (nunca presuma que atende).
+3. Diga o que falta e como conseguir (onde emitir, prazo típico), em ordem de prioridade.
+4. Liste cláusulas que parecem restritivas/ilegais e que poderiam ser impugnadas.
+${lic?`\nLICITAÇÃO: ${lic.objeto} | Órgão: ${lic.orgao} | ${lic.municipio}/${lic.uf} | Valor estimado: ${brl(lic.valor)} | Encerramento: ${fmtDataHora(lic.encerramento)}\n`:""}
+${perfilEmpresaTexto()}
+
+${json?`FORMATO DA RESPOSTA: responda APENAS com um JSON válido, sem texto fora dele, neste formato:
+{"resumo":{"objeto":"","orgao":"","modalidade":"","criterio_julgamento":"","valor_estimado":"","data_sessao":"","prazo_impugnacao":"","exclusivo_me_epp":"sim|não|não informado","lei_aplicavel":""},
+ "veredito":"apta|apta_com_pendencias|inapta|indefinido",
+ "explicacao_veredito":"",
+ "requisitos":[{"categoria":"Jurídica|Fiscal/Trabalhista|Econômico-financeira|Técnica|Proposta|Participação","exigencia":"","item_edital":"","status":"atende|nao_atende|verificar","observacao":"","acao":""}],
+ "pendencias_prioritarias":[{"acao":"","onde_como":"","prazo":""}],
+ "clausulas_possivelmente_impugnaveis":[{"item_edital":"","problema":"","fundamento":""}],
+ "riscos":[""]}`:`FORMATO DA RESPOSTA (Markdown):
+## Resumo da licitação
+## Veredito (Apta / Apta com pendências / Inapta) e por quê
+## Tabela de requisitos
+| Categoria | Exigência | Item do edital | Status (✅ atende / ❌ não atende / ⚠️ verificar) | O que fazer |
+## O que falta — plano de ação priorizado
+## Cláusulas que podem ser impugnadas
+## Riscos e pontos de atenção`}
+
+EDITAL (texto extraído):
+"""
+${edital}
+"""`;
+}
+function promptImpugnacao(edital, lic){
+  return `${REGRAS_GERAIS}
+
+TAREFA: AUDITORIA DO EDITAL PARA IMPUGNAÇÃO (art. 164 da Lei 14.133/2021 — qualquer pessoa pode impugnar até 3 dias úteis antes da abertura da sessão).
+Procure, item por item, cláusulas ilegais, restritivas à competitividade ou contraditórias, por exemplo:
+- Qualificação técnica além das parcelas de maior relevância ou com quantitativos excessivos (art. 67); exigência de atestados com limitação de tempo, época ou local; exigência de quantidade mínima de atestados sem justificativa.
+- Exigências econômico-financeiras desproporcionais: capital/PL acima de 10% do valor estimado (art. 69 §4º), índices não usuais ou sem justificativa, exigência de índices de rentabilidade/lucratividade.
+- Visita técnica obrigatória sem a alternativa de declaração de conhecimento (art. 63).
+- Indicação de marca sem justificativa técnica (art. 41), especificações que direcionam para um fabricante, carta de solidariedade/credenciamento do fabricante como habilitação.
+- Certificações (ISO etc.), registros ou filiações não exigidos por lei como condição de habilitação.
+- Aglutinação indevida de itens/lotes que deveriam ser parcelados; ausência de cota/exclusividade ME/EPP quando obrigatória (LC 123, art. 48).
+- Prazos exíguos (entrega, instalação, apresentação de amostras), prazo de publicação inferior ao mínimo legal (art. 55), garantias acima dos limites legais.
+- Contradições entre edital, termo de referência, minuta de contrato e planilhas; critérios de julgamento subjetivos; ausência de informações essenciais (quantitativos, local, orçamento quando não sigiloso).
+- Qualquer outra cláusula que viole os princípios do art. 5º e as vedações do art. 9º.
+Considere o ponto de vista de uma empresa interessada em participar.
+${lic?`\nLICITAÇÃO: ${lic.objeto} | Órgão: ${lic.orgao} | ${lic.municipio}/${lic.uf} | Valor estimado: ${brl(lic.valor)} | Sessão/encerramento: ${fmtDataHora(lic.encerramento)}\n`:""}
+${perfilEmpresaTexto()}
+
+FORMATO DA RESPOSTA (Markdown):
+## 1. Resumo executivo (vale a pena impugnar? quais os 3 pontos mais fortes)
+## 2. Prazo
+Data da sessão segundo o edital e data-limite estimada para impugnação (3 dias úteis antes; avise para conferir feriados locais e o canal de envio indicado no edital).
+## 3. Pontos impugnáveis
+| # | Item do edital | O que diz | Por que é irregular | Fundamento | Força (Alta/Média/Baixa) |
+## 4. Pontos que NÃO recomendo impugnar (fracos ou legítimos) e por quê
+## 5. Pedidos de esclarecimento sugeridos (dúvidas que não justificam impugnação)
+## 6. Minuta da impugnação
+Peça completa e pronta para revisão: endereçamento ao agente de contratação/pregoeiro, qualificação da impugnante [PREENCHER], tempestividade, síntese dos fatos, fundamentos jurídicos (um tópico por ponto com força Alta/Média), pedidos (alteração das cláusulas, republicação do edital e reabertura do prazo — art. 55 §1º quando a alteração afetar a formulação das propostas), local, data e assinatura [PREENCHER].
+
+EDITAL (texto extraído):
+"""
+${edital}
+"""`;
+}
+function promptRecurso(edital, docsConc, conc, lic, ata){
+  return `${REGRAS_GERAIS}
+
+TAREFA: ANÁLISE DA HABILITAÇÃO E PROPOSTA DO CONCORRENTE PARA RECURSO ADMINISTRATIVO (art. 165 da Lei 14.133/2021: manifestação imediata da intenção de recorrer na sessão e razões em 3 dias úteis).
+Confronte, exigência por exigência, o que o EDITAL pede com o que o CONCORRENTE apresentou. Verifique em especial:
+- Documentos ausentes, vencidos na data da sessão, sem assinatura/autenticação exigida, ou de outro CNPJ (matriz x filial).
+- Objeto social e CNAEs compatíveis com o objeto licitado.
+- Atestados: compatibilidade de objeto, quantitativos mínimos, parcelas de maior relevância, emitente (atestado emitido por empresa do mesmo grupo ou com sócios em comum é suspeito), datas incompatíveis com a data de abertura da empresa.
+- Balanço: exercício correto, assinatura de contador, registro/autenticação quando exigido, recalcule os índices (LG, SG, LC) e confira PL/capital mínimo.
+- Proposta: preço manifestamente inexequível (art. 59; para obras e serviços de engenharia o §4º presume inexequível abaixo de 75% do orçado), planilha de custos com erros (salários abaixo da convenção coletiva, encargos/tributos incorretos, regime tributário incompatível — ex.: optante do Simples em cessão de mão de obra vedada), marca/modelo que não atende à especificação, prazo de validade, declarações obrigatórias.
+- Benefício ME/EPP usado indevidamente (porte/faturamento), sanções (impedimento/inidoneidade — indicar consulta ao CEIS/CNEP e à certidão consolidada do TCU), indícios de conluio (sócios, endereços, telefones em comum com outros licitantes).
+Para cada ponto, classifique: INSANÁVEL (leva à inabilitação/desclassificação) ou SANÁVEL (pode ser corrigido por diligência — então o recurso tende a não prosperar nesse ponto).
+${lic?`\nLICITAÇÃO: ${lic.objeto} | Órgão: ${lic.orgao} | ${lic.municipio}/${lic.uf} | Valor estimado: ${brl(lic.valor)}\n`:""}
+DADOS CADASTRAIS DO CONCORRENTE (Receita Federal, dados abertos):
+${dadosConcorrenteTexto(conc)}
+
+${perfilEmpresaTexto()}
+
+FORMATO DA RESPOSTA (Markdown):
+## 1. Resumo executivo (há base sólida para recurso? quais os pontos mais fortes)
+## 2. Checklist de conformidade do concorrente
+| Exigência do edital (item) | O que o concorrente apresentou | Situação (✅ ok / ❌ falha / ⚠️ verificar) | Insanável ou sanável | Fundamento |
+## 3. Falhas com potencial de inabilitação/desclassificação (detalhar, da mais forte para a mais fraca)
+## 4. Pontos fracos que eu NÃO usaria no recurso e por quê
+## 5. Verificações externas recomendadas (CEIS, CNEP, TCU, CNDT, FGTS, junta comercial etc.) com o que procurar
+## 6. Texto curto para registrar a INTENÇÃO DE RECORRER na sessão (máx. 5 linhas, motivada)
+## 7. Minuta das RAZÕES DO RECURSO
+Peça completa: endereçamento, qualificação da recorrente [PREENCHER], tempestividade, síntese dos fatos, mérito (um tópico por falha forte, com item do edital e prova documental), pedidos (reforma da decisão, inabilitação/desclassificação do concorrente, efeito suspensivo quando cabível — art. 168), local, data, assinatura [PREENCHER].
+
+EDITAL (texto extraído):
+"""
+${edital}
+"""
+
+DOCUMENTOS / PROPOSTA DO CONCORRENTE:
+"""
+${docsConc}
+"""
+${ata?`\nATA DA SESSÃO:\n"""\n${ata}\n"""`:""}`;
+}
+
+/* ---------------- Navegação ---------------- */
+const ICONS={
+  painel:'<path d="M3 13h8V3H3zM13 21h8V11h-8zM13 3v6h8V3zM3 21h8v-6H3z"/>',
+  empresa:'<path d="M3 21h18M5 21V7l7-4 7 4v14M9 9h1M14 9h1M9 13h1M14 13h1M9 17h1M14 17h1"/>',
+  radar:'<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>',
+  licitacoes:'<path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2M9 14l2 2 4-4"/>',
+  analise:'<path d="M12 3l1.9 4.6L18.5 9l-4.6 1.9L12 15.5l-1.9-4.6L5.5 9l4.6-1.4z"/><path d="M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9z"/>',
+  concorrentes:'<path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>',
+  config:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/>'
+};
+const PAGINAS=[["painel","Painel"],["empresa","Minha empresa"],["radar","Radar PNCP"],["licitacoes","Minhas licitações"],["analise","Análise com IA"],["concorrentes","Concorrentes"],["config","Configurações"]];
+let pagina = (location.hash||"").slice(1) || "painel";
+if(!PAGINAS.some(p=>p[0]===pagina)) pagina="painel";
+function ir(p){ pagina=p; try{ history.replaceState(null,"","#"+p); }catch(e){ location.hash=p; } render(); window.scrollTo(0,0); }
+window.addEventListener("hashchange",()=>{ const p=location.hash.slice(1); if(PAGINAS.some(x=>x[0]===p) && p!==pagina){ pagina=p; render(); } });
+function renderNav(){
+  $("#nav").innerHTML=PAGINAS.map(([k,n])=>`<a class="${k===pagina?"on":""}" onclick="ir('${k}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[k]}</svg><span>${n}</span></a>`).join("");
+}
+function render(){
+  renderNav();
+  const fn={painel:pgPainel,empresa:pgEmpresa,radar:pgRadar,licitacoes:pgLicitacoes,analise:pgAnalise,concorrentes:pgConcorrentes,config:pgConfig}[pagina];
+  $("#main").innerHTML=fn();
+  const after={empresa:posEmpresa,radar:posRadar,analise:posAnalise,concorrentes:posConcorrentes,config:posConfig}[pagina];
+  after&&after();
+}
+const header=(t,s,extra="")=>`<div class="top"><div><h1>${t}</h1><p>${s}</p></div><div class="row" style="flex:0 0 auto">${extra}</div></div>`;
+
+/* ---------------- Status das licitações ---------------- */
+const STATUS={analise:["Em análise","blue"],apta:["Apta","ok"],pendencias:["Com pendências","warn"],inapta:["Inapta","bad"],participando:["Participando","blue"],ganha:["Ganha 🏆","ok"],perdida:["Perdida","bad"],descartada:["Descartada",""]};
+const stChip=s=>{ const [n,c]=STATUS[s]||STATUS.analise; return `<span class="chip ${c}">${n}</span>`; };
+
+/* ================= PÁGINA: PAINEL ================= */
+function pgPainel(){
+  const L=S.licitacoes, ativos=L.filter(l=>!["ganha","perdida","descartada"].includes(l.status));
+  const prox=ativos.filter(l=>l.encerramento && diasAte(l.encerramento)!==null && diasAte(l.encerramento)>=0).sort((a,b)=>new Date(a.encerramento)-new Date(b.encerramento)).slice(0,6);
+  const docsAlert=S.empresa.docs.filter(d=>d.validade).map(d=>({...d,dias:diasAte(d.validade)})).filter(d=>d.dias<=20).sort((a,b)=>a.dias-b.dias);
+  const ganhas=L.filter(l=>l.status==="ganha"), valGanho=ganhas.reduce((s,l)=>s+(+l.valor||0),0);
+  const emp=S.empresa.dados;
+  const passos=[[!!emp,"Cadastre sua empresa pelo CNPJ","empresa"],[S.empresa.docs.length>0,"Inclua as certidões e validades","empresa"],[L.length>0,"Busque e salve licitações no Radar","radar"],[L.some(l=>l.analise),"Rode a análise de enquadramento com IA","analise"]];
+  const feitos=passos.filter(p=>p[0]).length;
+  return header("Painel", emp?`${esc(emp.razao)} · CNPJ ${fmtCNPJ(S.empresa.cnpj)}`:"Visão geral das suas licitações", `<button class="btn" onclick="ir('radar')">Buscar licitações</button>`)+
+  (feitos<4?`<div class="card" style="margin-bottom:16px"><h2>Primeiros passos <span class="chip">${feitos}/4</span></h2>${passos.map(([ok,t,p])=>`<div class="flag ${ok?"ok":"info"}" style="cursor:pointer" onclick="ir('${p}')"><div>${ok?"✅":"➡️"}</div><div>${t}</div></div>`).join("")}</div>`:"")+
+  `<div class="grid g4">
+    <div class="card kpi"><div class="lbl">Em acompanhamento</div><div class="val">${ativos.length}</div><div class="sub">${L.length} no total</div></div>
+    <div class="card kpi"><div class="lbl">Aptas</div><div class="val" style="color:var(--ok)">${L.filter(l=>l.status==="apta").length}</div><div class="sub">${L.filter(l=>l.status==="pendencias").length} com pendências</div></div>
+    <div class="card kpi"><div class="lbl">Valor em disputa</div><div class="val" style="font-size:22px;padding-top:6px">${brl(ativos.reduce((s,l)=>s+(+l.valor||0),0))}</div><div class="sub">estimado pelos órgãos</div></div>
+    <div class="card kpi"><div class="lbl">Ganhas</div><div class="val">${ganhas.length}</div><div class="sub">${brl(valGanho)}</div></div>
+  </div>
+  <div class="grid g2" style="margin-top:16px">
+    <div class="card"><h2>Próximos prazos</h2>${prox.length?`<div class="list">${prox.map(l=>{const d=diasAte(l.encerramento);return `<div class="it"><div style="min-width:0"><div class="t">${esc(l.objeto.slice(0,110))}${l.objeto.length>110?"…":""}</div><div class="small muted">${esc(l.orgao)} · ${esc(l.municipio)}/${esc(l.uf)}</div></div><div style="text-align:right;flex-shrink:0"><span class="chip ${d<=3?"bad":d<=7?"warn":""}">${d===0?"hoje":d===1?"amanhã":"em "+d+" dias"}</span><div class="small muted">${fmtData(l.encerramento)}</div></div></div>`}).join("")}</div>`:`<div class="empty">Nenhuma licitação com prazo futuro. Salve algumas pelo Radar.</div>`}</div>
+    <div class="card"><h2>Documentos da empresa</h2>${S.empresa.docs.length?(docsAlert.length?docsAlert.map(d=>`<div class="flag ${d.dias<0?"bad":"warn"}"><div>${d.dias<0?"⛔":"⏳"}</div><div><b>${esc(d.nome)}</b> — ${d.dias<0?"vencido há "+(-d.dias)+" dia(s)":d.dias===0?"vence hoje":"vence em "+d.dias+" dia(s)"} (${fmtData(d.validade)})</div></div>`).join(""):`<div class="flag ok"><div>✅</div><div>Todos os ${S.empresa.docs.length} documentos com validade acima de 20 dias.</div></div>`):`<div class="empty">Cadastre suas certidões em <a href="#empresa" onclick="ir('empresa');return false">Minha empresa</a> para receber alertas de vencimento.</div>`}</div>
+  </div>
+  <div class="card" style="margin-top:16px"><h2>Funil <button class="btn sec sm" onclick="ir('licitacoes')">Ver todas</button></h2>
+    <div class="row">${Object.entries(STATUS).map(([k,[n,c]])=>`<div class="fit" style="padding:10px 14px;border:1px solid var(--line);border-radius:12px;min-width:120px"><div class="small muted">${n}</div><div style="font-size:22px;font-weight:800">${L.filter(l=>(l.status||"analise")===k).length}</div></div>`).join("")}</div>
+  </div>`;
+}
+
+/* ================= PÁGINA: MINHA EMPRESA ================= */
+const DOCS_PADRAO=["CND Federal (Receita/PGFN)","CRF — FGTS","CNDT — Débitos Trabalhistas","Certidão Estadual","Certidão Municipal","Certidão de Falência e Recuperação Judicial","Contrato social consolidado","Balanço patrimonial (último exercício)","Certidão do conselho profissional (CREA/CRA etc.)","Alvará de funcionamento"];
+function pgEmpresa(){
+  const e=S.empresa, d=e.dados;
+  return header("Minha empresa","Os dados da Receita Federal são carregados pelo CNPJ. O resto você completa uma vez e atualiza quando mudar.")+
+  `<div class="stack">
+  <div class="card"><h2>Dados da Receita Federal</h2>
+    <div class="row"><div><label>CNPJ</label><input id="eCnpj" inputmode="numeric" placeholder="00.000.000/0000-00" value="${e.cnpj?fmtCNPJ(e.cnpj):""}"></div><div class="fit"><button class="btn" id="eBuscar">Carregar da Receita</button></div></div>
+    <div id="eMsg"></div>
+    ${d?blocoDadosEmpresa(d):`<p class="muted small" style="margin-top:12px">Digite o CNPJ e clique em carregar. Busca em BrasilAPI → Minha Receita → CNPJ.ws (todas usam os dados abertos oficiais da Receita).</p>`}
+  </div>
+  <div class="card"><h2>Áreas de atuação</h2>
+    <label>Palavras-chave do que sua empresa vende/executa (usadas no Radar e na compatibilidade)</label>
+    <input id="ePal" placeholder="ex.: limpeza, conservação, jardinagem, portaria, manutenção predial" value="${esc(e.palavras)}">
+    <label>Registros em conselhos / licenças</label>
+    <input id="eReg" placeholder="ex.: CREA-PA nº 12345, Licença ANVISA, CRA..." value="${esc(e.registros)}">
+    <label>Observações gerais</label><textarea id="eObs" style="min-height:70px" placeholder="Equipe técnica, equipamentos, certificações, limitações...">${esc(e.obs)}</textarea>
+  </div>
+  <div class="card"><h2>Qualificação econômico-financeira <span class="small muted">último balanço</span></h2>
+    <div class="grid g3">
+      ${[["pl","Patrimônio líquido (R$)"],["capital","Capital integralizado (R$)"],["faturamento","Faturamento anual (R$)"],["lg","Liquidez Geral (LG)"],["sg","Solvência Geral (SG)"],["lc","Liquidez Corrente (LC)"]].map(([k,n])=>`<div><label>${n}</label><input data-fin="${k}" inputmode="decimal" value="${esc(e.fin[k])}"></div>`).join("")}
+    </div>
+    <p class="small muted">Dica: a maioria dos editais exige LG, SG e LC maiores que 1. Quando algum índice fica abaixo, costumam pedir capital ou PL mínimo de até 10% do valor estimado.</p>
+  </div>
+  <div class="card"><h2>Documentos de habilitação <button class="btn sec sm" id="dPadrao">+ Lista padrão</button></h2>
+    <div class="tbl"><table><thead><tr><th>Documento</th><th style="width:150px">Validade</th><th>Obs.</th><th style="width:60px"></th></tr></thead><tbody>
+    ${e.docs.map(x=>{const dd=diasAte(x.validade);return `<tr><td><input data-doc="${x.id}" data-k="nome" value="${esc(x.nome)}"></td><td><input type="date" data-doc="${x.id}" data-k="validade" value="${esc(x.validade)}">${x.validade?`<div class="small" style="margin-top:4px">${dd<0?'<span class="chip bad">vencido</span>':dd<=20?`<span class="chip warn">${dd} dias</span>`:'<span class="chip ok">ok</span>'}</div>`:""}</td><td><input data-doc="${x.id}" data-k="obs" value="${esc(x.obs||"")}"></td><td><button class="btn ghost" onclick="delDoc('${x.id}')">✕</button></td></tr>`}).join("")||`<tr><td colspan="4" class="muted">Nenhum documento. Clique em "+ Lista padrão" ou adicione abaixo.</td></tr>`}
+    </tbody></table></div>
+    <div class="right"><button class="btn sec sm" id="dAdd">+ Adicionar documento</button></div>
+  </div>
+  <div class="card"><h2>Atestados de capacidade técnica</h2>
+    <div class="tbl"><table><thead><tr><th>Serviço/fornecimento atestado</th><th>Quantitativo</th><th>Emitente</th><th style="width:90px">Ano</th><th style="width:60px"></th></tr></thead><tbody>
+    ${e.atestados.map(x=>`<tr><td><input data-at="${x.id}" data-k="descricao" value="${esc(x.descricao)}"></td><td><input data-at="${x.id}" data-k="quant" value="${esc(x.quant||"")}"></td><td><input data-at="${x.id}" data-k="emitente" value="${esc(x.emitente||"")}"></td><td><input data-at="${x.id}" data-k="ano" value="${esc(x.ano||"")}"></td><td><button class="btn ghost" onclick="delAt('${x.id}')">✕</button></td></tr>`).join("")||`<tr><td colspan="5" class="muted">Nenhum atestado cadastrado.</td></tr>`}
+    </tbody></table></div>
+    <div class="right"><button class="btn sec sm" id="aAdd">+ Adicionar atestado</button></div>
+  </div>
+  </div>`;
+}
+function blocoDadosEmpresa(d){
+  return `<div style="margin-top:14px"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px"><b style="font-size:16px">${esc(d.razao)}</b>${/ativa/i.test(d.situacao)?'<span class="chip ok">ATIVA</span>':`<span class="chip bad">${esc(d.situacao||"?")}</span>`}${d.porte?`<span class="chip">${esc(d.porte)}</span>`:""}${d.simples?'<span class="chip blue">Simples</span>':""}${d.mei?'<span class="chip warn">MEI</span>':""}</div>
+  <dl class="dl">
+    ${d.fantasia?`<dt>Nome fantasia</dt><dd>${esc(d.fantasia)}</dd>`:""}
+    <dt>Abertura</dt><dd>${fmtData(d.abertura)}</dd>
+    <dt>Natureza jurídica</dt><dd>${esc(d.natureza)}</dd>
+    <dt>Capital social</dt><dd>${brl(d.capital)}</dd>
+    <dt>CNAE principal</dt><dd>${esc(d.cnaePrincipal.codigo)} — ${esc(d.cnaePrincipal.descricao)}</dd>
+    <dt>CNAEs secundários</dt><dd>${d.cnaesSec.length?`<details><summary>${d.cnaesSec.length} atividades</summary><ul class="small">${d.cnaesSec.map(c=>`<li>${esc(c.codigo)} — ${esc(c.descricao)}</li>`).join("")}</ul></details>`:"nenhum"}</dd>
+    <dt>Endereço</dt><dd>${esc(d.endereco)} — ${esc(d.municipio)}/${esc(d.uf)} · CEP ${esc(d.cep)}</dd>
+    ${d.telefone||d.email?`<dt>Contato</dt><dd>${esc(d.telefone)} ${esc(d.email)}</dd>`:""}
+    <dt>Sócios</dt><dd>${d.socios.map(s=>`${esc(s.nome)} <span class="muted small">(${esc(s.qualificacao)})</span>`).join("<br>")||"—"}</dd>
+    <dt>Fonte</dt><dd class="small muted">${esc(d.fonte)} · consultado em ${fmtDataHora(d.consultadoEm)}</dd>
+  </dl></div>`;
+}
+function posEmpresa(){
+  const e=S.empresa;
+  const cn=$("#eCnpj"); cn.addEventListener("input",()=>{ const v=soDig(cn.value).slice(0,14); cn.value=v.length===14?fmtCNPJ(v):v; });
+  $("#eBuscar").onclick=async()=>{
+    const c=soDig(cn.value); if(!cnpjValido(c)){ $("#eMsg").innerHTML=`<div class="flag bad"><div>✕</div><div>CNPJ inválido. Confira os números.</div></div>`; return; }
+    const b=$("#eBuscar"); b.disabled=true; b.innerHTML='<span class="spin"></span> Consultando…';
+    try{ const d=await consultarCNPJ(c); e.cnpj=c; e.dados=d; if(!e.palavras) e.palavras=tokens(d.cnaePrincipal.descricao).slice(0,4).join(", "); salvar(); render(); toast("Dados carregados da Receita ✔"); }
+    catch(err){ b.disabled=false; b.textContent="Carregar da Receita"; e.cnpj=c; salvar(); $("#eMsg").innerHTML = err.message==="bloqueado"?avisoSemRede()+manualEmpresaHTML():`<div class="flag bad"><div>✕</div><div>${esc(err.message)}</div></div>`; ligarManual(); }
+  };
+  $("#ePal").onchange=ev=>{e.palavras=ev.target.value;salvar();};
+  $("#eReg").onchange=ev=>{e.registros=ev.target.value;salvar();};
+  $("#eObs").onchange=ev=>{e.obs=ev.target.value;salvar();};
+  document.querySelectorAll("[data-fin]").forEach(i=>i.onchange=()=>{e.fin[i.dataset.fin]=i.value.replace(/\./g,"").replace(",",".");salvar();});
+  document.querySelectorAll("[data-doc]").forEach(i=>i.onchange=()=>{const x=e.docs.find(d=>d.id===i.dataset.doc); x[i.dataset.k]=i.value; salvar(); if(i.dataset.k==="validade") render();});
+  document.querySelectorAll("[data-at]").forEach(i=>i.onchange=()=>{const x=e.atestados.find(d=>d.id===i.dataset.at); x[i.dataset.k]=i.value; salvar();});
+  $("#dAdd").onclick=()=>{e.docs.push({id:uid(),nome:"",validade:"",obs:""});salvar();render();};
+  $("#dPadrao").onclick=()=>{const ex=new Set(e.docs.map(d=>d.nome)); DOCS_PADRAO.forEach(n=>{if(!ex.has(n)) e.docs.push({id:uid(),nome:n,validade:"",obs:""});}); salvar(); render();};
+  $("#aAdd").onclick=()=>{e.atestados.push({id:uid(),descricao:"",quant:"",emitente:"",ano:""});salvar();render();};
+}
+function manualEmpresaHTML(){ return `<div class="card" style="margin-top:10px;box-shadow:none"><h3 style="margin-top:0">Preencher manualmente</h3><div class="grid g2">
+  <div><label>Razão social</label><input id="mRaz"></div><div><label>Situação</label><input id="mSit" value="ATIVA"></div>
+  <div><label>CNAE principal (código — descrição)</label><input id="mCnae"></div><div><label>Porte</label><input id="mPorte" placeholder="ME / EPP / Demais"></div>
+  <div><label>Capital social (R$)</label><input id="mCap" inputmode="decimal"></div><div><label>Município/UF</label><input id="mMun" placeholder="Santarém/PA"></div></div>
+  <div class="right"><button class="btn" id="mSalvar">Salvar dados</button></div></div>`; }
+function ligarManual(){ const b=$("#mSalvar"); if(!b) return; b.onclick=()=>{ const [cod,...desc]=($("#mCnae").value||"").split(/\s*[—-]\s*/); const [mun,uf]=($("#mMun").value||"").split("/");
+  S.empresa.dados={cnpj:S.empresa.cnpj,razao:$("#mRaz").value,fantasia:"",situacao:$("#mSit").value,abertura:"",natureza:"",porte:$("#mPorte").value,capital:+($("#mCap").value||"0").replace(/\./g,"").replace(",","."),simples:null,mei:null,cnaePrincipal:{codigo:cod||"",descricao:desc.join(" - ")},cnaesSec:[],endereco:"",municipio:mun||"",uf:(uf||"").trim(),cep:"",telefone:"",email:"",socios:[],fonte:"Manual",consultadoEm:new Date().toISOString()};
+  salvar(); render(); }; }
+function delDoc(id){ S.empresa.docs=S.empresa.docs.filter(d=>d.id!==id); salvar(); render(); }
+function delAt(id){ S.empresa.atestados=S.empresa.atestados.filter(d=>d.id!==id); salvar(); render(); }
+
+/* ================= PÁGINA: RADAR PNCP ================= */
+let radarBusy=false;
+function pgRadar(){
+  const r=S.radar;
+  return header("Radar PNCP","Licitações com propostas abertas no Portal Nacional de Contratações Públicas — todo o Brasil.")+
+  `<div class="card"><div class="grid g4">
+    <div style="grid-column:span 2"><label>Palavras-chave (separadas por vírgula)</label><input id="rPal" value="${esc(r.palavras||S.empresa.palavras)}" placeholder="ex.: limpeza, conservação"></div>
+    <div><label>UF</label><select id="rUf"><option value="">Brasil inteiro</option>${UFS.map(u=>`<option ${u===r.uf?"selected":""}>${u}</option>`).join("")}</select></div>
+    <div><label>Modalidade</label><select id="rMod">${Object.entries(MODALIDADES).map(([k,n])=>`<option value="${k}" ${k===r.modalidade?"selected":""}>${n}</option>`).join("")}</select></div>
+    <div><label>Propostas encerrando nos próximos</label><select id="rDias">${["7","15","30","60","90"].map(x=>`<option value="${x}" ${x===r.dias?"selected":""}>${x} dias</option>`).join("")}</select></div>
+    <div><label>Profundidade da busca</label><select id="rPag">${[["1","Rápida (50)"],["3","Normal (150)"],["6","Ampla (300)"],["10","Máxima (500)"]].map(([k,n])=>`<option value="${k}" ${k===r.paginas?"selected":""}>${n}</option>`).join("")}</select></div>
+    <div style="grid-column:span 2;display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap"><button class="btn" id="rBuscar">Buscar no PNCP</button><a class="btn sec" id="rAbrir" target="_blank" rel="noopener">Abrir no site do PNCP ↗</a><button class="btn sec" id="rManual">+ Cadastrar manualmente</button></div>
+  </div>
+  <div id="rInfo"></div>
+  <div id="rProg" class="hide"><div class="progress"><i id="rBar"></i></div><div class="small muted" id="rTxt" style="margin-top:6px"></div></div>
+  <p class="small muted" style="margin-bottom:0">O PNCP pode levar de 10 a 20 segundos por página. As palavras-chave são filtradas aqui no painel; a compatibilidade compara o objeto com seus CNAEs e palavras-chave.</p></div>
+  <div id="rRes" style="margin-top:16px">${tabelaRadar(r.ultimos||[])}</div>`;
+}
+function tabelaRadar(lista){
+  if(!lista.length) return `<div class="empty">Faça uma busca para ver as licitações abertas.</div>`;
+  const salvos=new Set(S.licitacoes.map(l=>l.pncpId).filter(Boolean));
+  return `<div class="card"><h2>${lista.length} licitação(ões) encontrada(s)</h2><div class="tbl"><table><thead><tr><th>Objeto</th><th>Órgão / Local</th><th>Valor estimado</th><th>Encerra</th><th>Aderência</th><th></th></tr></thead><tbody>
+  ${lista.map((l,i)=>{const sc=compatCNAE(l.objeto,S.empresa.dados,S.empresa.palavras);const d=diasAte(l.encerramento);return `<tr><td style="min-width:260px"><div style="font-weight:600">${esc(l.objeto.slice(0,220))}${l.objeto.length>220?"…":""}</div><div class="small muted">${esc(l.modalidade)}${l.srp?" · SRP":""} · <a href="${esc(l.link)}" target="_blank" rel="noopener">ver no PNCP ↗</a></div></td><td class="small">${esc(l.orgao)}<br><span class="muted">${esc(l.municipio)}/${esc(l.uf)}</span></td><td style="white-space:nowrap">${brl(l.valor)}</td><td style="white-space:nowrap">${fmtData(l.encerramento)}<br><span class="small muted">${d!==null?(d<0?"encerrada":d+" dias"):""}</span></td><td><span class="chip ${sc.nivel==="Alta"?"ok":sc.nivel==="Média"?"warn":""}" title="${esc(sc.hits.join(", "))}">${sc.nivel}</span></td><td>${l.pncpId&&salvos.has(l.pncpId)?'<span class="chip ok">Salva</span>':`<button class="btn sm" onclick="salvarRadar(${i})">Salvar</button>`}</td></tr>`}).join("")}
+  </tbody></table></div></div>`;
+}
+function salvarRadar(i){ const l={...S.radar.ultimos[i],id:uid(),status:"analise",notas:"",criadoEm:new Date().toISOString()}; S.licitacoes.unshift(l); salvar(); render(); toast("Licitação salva em Minhas licitações"); }
+function posRadar(){
+  const r=S.radar;
+  const sync=()=>{ r.palavras=$("#rPal").value; r.uf=$("#rUf").value; r.modalidade=$("#rMod").value; r.dias=$("#rDias").value; r.paginas=$("#rPag").value; salvar();
+    const q=r.palavras.split(",")[0]?.trim()||""; $("#rAbrir").href=`https://pncp.gov.br/app/editais?q=${encodeURIComponent(q)}&status=recebendo_proposta&pagina=1`; };
+  ["#rPal","#rUf","#rMod","#rDias","#rPag"].forEach(s=>$(s).addEventListener("change",sync)); sync();
+  $("#rManual").onclick=()=>novaLicitacaoManual();
+  carregarMeta().then(m=>{ const el=$("#rInfo"); if(el && m && m.total) el.innerHTML=`<div class="flag ok" style="margin:0 0 12px"><div>🗂️</div><div>Base do PNCP atualizada em <b>${fmtDataHora(m.atualizado)}</b> · ${m.total.toLocaleString("pt-BR")} licitações abertas em todo o Brasil. Atualiza sozinha 3× ao dia.${m.completo===false?' <span class="small muted">(última coleta parcial)</span>':""}</div></div>`; });
+  $("#rBuscar").onclick=async()=>{
+    if(radarBusy) return; sync(); radarBusy=true;
+    const b=$("#rBuscar"); b.disabled=true; b.innerHTML='<span class="spin"></span> Buscando…';
+    $("#rProg").classList.remove("hide");
+    const meta=await carregarMeta();
+    if(meta && meta.total){
+      const ufs=r.uf?[r.uf]:Object.keys(meta.por_uf||{}).filter(u=>meta.por_uf[u]>0);
+      let todos=[];
+      for(let i=0;i<ufs.length;i++){ $("#rTxt").textContent=`Lendo base ${ufs[i]} (${i+1}/${ufs.length})…`; $("#rBar").style.width=(i/ufs.length*100)+"%"; todos=todos.concat(await carregarUF(ufs[i])); }
+      $("#rBar").style.width="100%";
+      const ate=Date.now()+(+r.dias)*864e5, agora=Date.now();
+      const kws=r.palavras.split(",").map(s=>semAcento(s).trim()).filter(Boolean);
+      let fil=todos.filter(l=>{ const t=new Date(l.encerramento).getTime(); if(l.encerramento && (t<agora||t>ate)) return false; if(r.modalidade && String(l.mc)!==r.modalidade) return false; if(kws.length){ const o=semAcento(l.objeto); return kws.some(k=>o.includes(k)); } return true; });
+      fil.sort((a,b)=>compatCNAE(b.objeto,S.empresa.dados,S.empresa.palavras).pts-compatCNAE(a.objeto,S.empresa.dados,S.empresa.palavras).pts || new Date(a.encerramento)-new Date(b.encerramento));
+      r.ultimos=fil.slice(0,300); salvar(); radarBusy=false;
+      $("#rTxt").textContent=`${todos.length.toLocaleString("pt-BR")} licitações na base · ${fil.length} batem com os filtros${fil.length>300?" (mostrando as 300 mais aderentes)":""}`;
+      b.disabled=false; b.textContent="Buscar no PNCP"; $("#rRes").innerHTML=tabelaRadar(r.ultimos); return;
+    }
+    const fim=new Date(Date.now()+ (+r.dias)*864e5); const pags=+r.paginas; let todos=[], erro=null;
+    for(let p=1;p<=pags;p++){
+      $("#rTxt").textContent=`Consultando PNCP — página ${p} de ${pags}…`; $("#rBar").style.width=((p-1)/pags*100)+"%";
+      let url=`https://pncp.gov.br/api/consulta/v1/contratacoes/proposta?dataFinal=${ymd(fim)}&pagina=${p}&tamanhoPagina=50`;
+      if(r.modalidade) url+=`&codigoModalidadeContratacao=${r.modalidade}`; if(r.uf) url+=`&uf=${r.uf}`;
+      try{ const j=await fetchJSON(url,60000); if(j.__vazio) break; const arr=j.data||[]; todos=todos.concat(arr.map(normPNCP)); if(j.totalPaginas && p>=j.totalPaginas) break; if(!arr.length) break; }
+      catch(e){ erro=e; break; }
+    }
+    $("#rBar").style.width="100%";
+    const kws=r.palavras.split(",").map(s=>semAcento(s).trim()).filter(Boolean);
+    let fil=kws.length?todos.filter(l=>{const o=semAcento(l.objeto);return kws.some(k=>o.includes(k));}):todos;
+    fil.sort((a,b)=>compatCNAE(b.objeto,S.empresa.dados,S.empresa.palavras).pts-compatCNAE(a.objeto,S.empresa.dados,S.empresa.palavras).pts || new Date(a.encerramento)-new Date(b.encerramento));
+    radarBusy=false;
+    if(erro && !todos.length){
+      $("#rProg").classList.add("hide"); b.disabled=false; b.textContent="Buscar no PNCP";
+      $("#rRes").innerHTML = (erro.status? `<div class="flag bad"><div>✕</div><div>O PNCP respondeu com erro (${esc(erro.message)}). Tente de novo em alguns minutos ou reduza a profundidade. Se escolheu "Todas" as modalidades, escolha uma específica.</div></div>` : avisoSemRede()) + `<div class="flag info"><div>💡</div><div>Use <b>Abrir no site do PNCP</b> para buscar lá e depois <b>Cadastrar manualmente</b> as que interessarem.</div></div>`;
+      return;
+    }
+    r.ultimos=fil.slice(0,300); salvar();
+    $("#rTxt").textContent=`${todos.length} licitações lidas · ${fil.length} batem com as palavras-chave${erro?" (busca interrompida: "+erro.message+")":""}`;
+    b.disabled=false; b.textContent="Buscar no PNCP";
+    $("#rRes").innerHTML=tabelaRadar(r.ultimos);
+  };
+}
+function novaLicitacaoManual(l){
+  const x=l||{};
+  modal(`<h2>${l?"Editar":"Nova"} licitação</h2>
+  <label>Objeto</label><textarea id="nObj" style="min-height:70px">${esc(x.objeto||"")}</textarea>
+  <div class="grid g2"><div><label>Órgão</label><input id="nOrg" value="${esc(x.orgao||"")}"></div><div><label>Modalidade</label><input id="nMod" value="${esc(x.modalidade||"Pregão Eletrônico")}"></div>
+  <div><label>Município</label><input id="nMun" value="${esc(x.municipio||"")}"></div><div><label>UF</label><input id="nUf" value="${esc(x.uf||"")}"></div>
+  <div><label>Valor estimado (R$)</label><input id="nVal" inputmode="decimal" value="${x.valor??""}"></div><div><label>Data da sessão / encerramento</label><input id="nEnc" type="datetime-local" value="${x.encerramento?String(x.encerramento).slice(0,16):""}"></div>
+  <div><label>Nº do edital / processo</label><input id="nNum" value="${esc(x.numero||"")}"></div><div><label>Link</label><input id="nLink" value="${esc(x.link||"")}"></div></div>
+  <div class="right"><button class="btn sec" onclick="fecharModal()">Cancelar</button><button class="btn" id="nOk">Salvar</button></div>`, m=>{
+    m.querySelector("#nOk").onclick=()=>{
+      const v={objeto:$("#nObj").value.trim(),orgao:$("#nOrg").value,modalidade:$("#nMod").value,municipio:$("#nMun").value,uf:$("#nUf").value.toUpperCase(),valor:$("#nVal").value?+$("#nVal").value.replace(/\./g,"").replace(",","."):null,encerramento:$("#nEnc").value,numero:$("#nNum").value,link:$("#nLink").value};
+      if(!v.objeto){ toast("Informe o objeto"); return; }
+      if(l) Object.assign(l,v); else S.licitacoes.unshift({...v,id:uid(),status:"analise",notas:"",criadoEm:new Date().toISOString()});
+      salvar(); fecharModal(); render(); toast("Salvo ✔");
+    };
+  });
+}
+
+/* ================= PÁGINA: MINHAS LICITAÇÕES ================= */
+let filtroStatus="ativos";
+function pgLicitacoes(){
+  let L=S.licitacoes;
+  if(filtroStatus==="ativos") L=L.filter(l=>!["ganha","perdida","descartada"].includes(l.status));
+  else if(filtroStatus!=="todas") L=L.filter(l=>l.status===filtroStatus);
+  return header("Minhas licitações","Acompanhe cada licitação, o enquadramento e as análises feitas.",`<button class="btn" onclick="novaLicitacaoManual()">+ Nova</button>`)+
+  `<div class="tabs">${[["ativos","Em andamento"],["todas","Todas"],...Object.entries(STATUS).map(([k,[n]])=>[k,n])].map(([k,n])=>`<button class="${k===filtroStatus?"on":""}" onclick="filtroStatus='${k}';render()">${n}</button>`).join("")}</div>
+  ${L.length?`<div class="stack">${L.map(cardLicitacao).join("")}</div>`:`<div class="empty">Nada por aqui. Use o <a href="#radar" onclick="ir('radar');return false">Radar</a> ou cadastre manualmente.</div>`}`;
+}
+function cardLicitacao(l){
+  const d=diasAte(l.encerramento), a=l.analise;
+  const req=a?.requisitos||[]; const nOk=req.filter(r=>r.status==="atende").length, nNo=req.filter(r=>r.status==="nao_atende").length, nV=req.filter(r=>r.status==="verificar").length;
+  return `<div class="card"><div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap"><div style="min-width:0;flex:1"><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">${stChip(l.status)}${l.modalidade?`<span class="chip">${esc(l.modalidade)}</span>`:""}${d!==null?`<span class="chip ${d<0?"":d<=3?"bad":d<=7?"warn":""}">${d<0?"encerrada":d===0?"hoje":"em "+d+" dias"} · ${fmtData(l.encerramento)}</span>`:""}</div>
+  <div style="font-weight:700">${esc(l.objeto)}</div><div class="small muted">${esc(l.orgao)} · ${esc(l.municipio)}/${esc(l.uf)} · ${brl(l.valor)}${l.link?` · <a href="${esc(l.link)}" target="_blank" rel="noopener">edital ↗</a>`:""}</div></div>
+  <div style="display:flex;gap:6px;align-items:flex-start;flex-wrap:wrap"><select onchange="mudaStatus('${l.id}',this.value)" style="width:auto">${Object.entries(STATUS).map(([k,[n]])=>`<option value="${k}" ${k===(l.status||"analise")?"selected":""}>${n}</option>`).join("")}</select></div></div>
+  ${a?`<div style="margin-top:12px;padding:12px;border-radius:12px;background:#f8fafc;border:1px solid var(--line)"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><b>Enquadramento:</b> ${vereditoChip(a.veredito)} <span class="chip ok">${nOk} atende</span> <span class="chip bad">${nNo} não atende</span> <span class="chip warn">${nV} verificar</span></div>${a.explicacao_veredito?`<div class="small" style="margin-top:6px">${esc(a.explicacao_veredito)}</div>`:""}</div>`:""}
+  <div class="right" style="justify-content:flex-start"><button class="btn sm" onclick="abrirAnalise('${l.id}','enquadramento')">${a?"Ver/refazer enquadramento":"Analisar enquadramento"}</button><button class="btn sec sm" onclick="abrirAnalise('${l.id}','impugnacao')">Impugnar edital</button><button class="btn sec sm" onclick="abrirAnalise('${l.id}','recurso')">Recurso contra concorrente</button><button class="btn ghost sm" onclick="editarNotas('${l.id}')">Notas${l.notas?" ●":""}</button><button class="btn ghost sm" onclick="novaLicitacaoManual(S.licitacoes.find(x=>x.id==='${l.id}'))">Editar</button><button class="btn ghost sm" onclick="confirmar('Excluir esta licitação?',()=>{S.licitacoes=S.licitacoes.filter(x=>x.id!=='${l.id}');salvar();render();})">Excluir</button></div></div>`;
+}
+const vereditoChip=v=>({apta:'<span class="chip ok">APTA</span>',apta_com_pendencias:'<span class="chip warn">APTA COM PENDÊNCIAS</span>',inapta:'<span class="chip bad">INAPTA</span>'}[v]||'<span class="chip">INDEFINIDO</span>');
+function mudaStatus(id,v){ const l=S.licitacoes.find(x=>x.id===id); l.status=v; salvar(); toast("Status atualizado"); }
+function editarNotas(id){ const l=S.licitacoes.find(x=>x.id===id); modal(`<h2>Notas</h2><textarea id="nt" style="min-height:200px">${esc(l.notas||"")}</textarea><div class="right"><button class="btn" id="ntOk">Salvar</button></div>`,m=>m.querySelector("#ntOk").onclick=()=>{l.notas=$("#nt").value;salvar();fecharModal();render();}); }
+function abrirAnalise(id,modo){ AN.licId=id; AN.modo=modo; AN.resultado=null; ir("analise"); }
+
+/* ================= PÁGINA: ANÁLISE COM IA ================= */
+const AN={modo:"enquadramento",licId:"",concId:"",edital:"",docs:"",ata:"",resultado:null,busy:false,prompt:""};
+function pgAnalise(){
+  const modos=[["enquadramento","1 · Enquadramento","Minha empresa atende ao edital? O que falta?"],["impugnacao","2 · Impugnar edital","Cláusulas ilegais ou restritivas + minuta"],["recurso","3 · Recurso contra concorrente","Falhas na habilitação/proposta do concorrente + minuta"]];
+  const ia=!!sampleFn;
+  return header("Análise com IA","Envie o edital (PDF ou texto). A IA cruza com o perfil da sua empresa e com os documentos do concorrente.")+
+  `<div class="banner"><div>${ia?"✨":"📋"}</div><div>${ia?"<b>IA integrada ativa.</b> A análise roda aqui mesmo.":"<b>Modo prompt.</b> O painel monta o prompt completo (edital + dados da empresa + regras jurídicas). Clique em <b>Copiar prompt</b> e cole no Claude. A análise inteira vem pronta."} Revise sempre as minutas antes de protocolar.</div></div>
+  <div class="tabs">${modos.map(([k,n])=>`<button class="${k===AN.modo?"on":""}" onclick="AN.modo='${k}';AN.resultado=null;render()">${n}</button>`).join("")}</div>
+  <div class="grid g2" style="align-items:start">
+   <div class="card"><h2>${modos.find(m=>m[0]===AN.modo)[1]}</h2><p class="muted small" style="margin-top:-6px">${modos.find(m=>m[0]===AN.modo)[2]}</p>
+    <label>Licitação (opcional, mas recomendado)</label><select id="aLic"><option value="">— nenhuma —</option>${S.licitacoes.map(l=>`<option value="${l.id}" ${l.id===AN.licId?"selected":""}>${esc(l.objeto.slice(0,90))} · ${esc(l.orgao.slice(0,40))}</option>`).join("")}</select>
+    <label>Edital</label>
+    <div class="drop" id="dEdital"><b>📄 Toque para enviar o PDF do edital</b><div class="small muted">ou cole o texto abaixo</div><input type="file" accept=".pdf,.txt,.md" class="hide" id="fEdital"></div>
+    <textarea id="tEdital" placeholder="Texto do edital (inclua o Termo de Referência)..." style="margin-top:8px;min-height:140px">${esc(AN.edital)}</textarea>
+    <div class="small muted" id="cEdital">${AN.edital?AN.edital.length.toLocaleString("pt-BR")+" caracteres":""}</div>
+    ${AN.modo==="recurso"?`
+      <label>Concorrente</label><select id="aConc"><option value="">— selecione (cadastre em Concorrentes) —</option>${S.concorrentes.map(c=>`<option value="${c.id}" ${c.id===AN.concId?"selected":""}>${esc(c.dados?.razao||fmtCNPJ(c.cnpj))}</option>`).join("")}</select>
+      <label>Documentos de habilitação e proposta do concorrente</label>
+      <div class="drop" id="dDocs"><b>📎 Enviar PDFs do concorrente</b><div class="small muted">pode selecionar vários</div><input type="file" accept=".pdf,.txt" multiple class="hide" id="fDocs"></div>
+      <textarea id="tDocs" placeholder="Ou cole aqui o texto dos documentos/proposta do concorrente..." style="margin-top:8px">${esc(AN.docs)}</textarea>
+      <label>Ata da sessão (opcional)</label><textarea id="tAta" style="min-height:70px" placeholder="Cole a ata, se tiver">${esc(AN.ata)}</textarea>`:""}
+    <div class="right">${ia?`<button class="btn" id="aRodar">✨ Analisar agora</button>`:""}<button class="btn ${ia?"sec":""}" id="aCopiar">📋 Copiar prompt</button></div>
+    ${!ia?`<p class="small muted">Depois de copiar, abra o <a href="https://claude.ai/new" target="_blank" rel="noopener">Claude ↗</a>, cole e envie. Se o edital for muito grande, você também pode anexar o PDF lá e colar só o prompt.</p>`:""}
+   </div>
+   <div class="card" id="aOut">${resultadoHTML()}</div>
+  </div>`;
+}
+function resultadoHTML(){
+  if(AN.busy) return `<h2>Analisando…</h2><div class="progress"><i style="width:60%;animation:none"></i></div><div class="md out" id="aStream" style="margin-top:12px;color:var(--muted)">A IA está lendo o edital. Isso pode levar 1–3 minutos em editais grandes.</div>`;
+  const r=AN.resultado;
+  if(!r) return `<h2>Resultado</h2><div class="empty">O resultado aparece aqui.<br><span class="small">Enquadramento: checklist item a item. Impugnação/Recurso: análise + minuta pronta para revisão.</span></div>`;
+  if(r.tipo==="json"){ const a=r.valor; const req=a.requisitos||[];
+    const ico={atende:"✅",nao_atende:"❌",verificar:"⚠️"};
+    return `<h2>Enquadramento ${vereditoChip(a.veredito)}</h2>
+    ${a.explicacao_veredito?`<p>${esc(a.explicacao_veredito)}</p>`:""}
+    ${a.resumo?`<dl class="dl small">${Object.entries(a.resumo).filter(([k,v])=>v).map(([k,v])=>`<dt>${esc(k.replace(/_/g," "))}</dt><dd>${esc(v)}</dd>`).join("")}</dl>`:""}
+    <h3>Requisitos (${req.length})</h3><div class="tbl"><table><thead><tr><th></th><th>Exigência</th><th>Item</th><th>O que fazer</th></tr></thead><tbody>${req.map(x=>`<tr><td>${ico[x.status]||"•"}</td><td><div class="small muted">${esc(x.categoria)}</div>${esc(x.exigencia)}${x.observacao?`<div class="small muted">${esc(x.observacao)}</div>`:""}</td><td class="small">${esc(x.item_edital)}</td><td class="small">${esc(x.acao)}</td></tr>`).join("")}</tbody></table></div>
+    ${(a.pendencias_prioritarias||[]).length?`<h3>O que falta — prioridades</h3>${a.pendencias_prioritarias.map((p,i)=>`<div class="flag warn"><div>${i+1}</div><div><b>${esc(p.acao)}</b><div class="small">${esc(p.onde_como)} ${p.prazo?"· prazo: "+esc(p.prazo):""}</div></div></div>`).join("")}`:""}
+    ${(a.clausulas_possivelmente_impugnaveis||[]).length?`<h3>Cláusulas possivelmente impugnáveis</h3>${a.clausulas_possivelmente_impugnaveis.map(c=>`<div class="flag info"><div>⚖️</div><div><b>${esc(c.item_edital)}</b> — ${esc(c.problema)} <span class="small muted">${esc(c.fundamento)}</span></div></div>`).join("")}<div class="right" style="justify-content:flex-start"><button class="btn sec sm" onclick="AN.modo='impugnacao';AN.resultado=null;render()">Gerar impugnação →</button></div>`:""}
+    ${(a.riscos||[]).length?`<h3>Riscos</h3><ul>${a.riscos.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`:""}
+    <div class="right"><button class="btn sec sm" onclick="copiar(JSON.stringify(AN.resultado.valor,null,2))">Copiar JSON</button></div>`;
+  }
+  return `<h2>${AN.modo==="impugnacao"?"Análise do edital e minuta de impugnação":AN.modo==="recurso"?"Análise do concorrente e minuta de recurso":"Resultado"}</h2>
+  <div class="md out">${md(r.valor)}</div>
+  <div class="right"><button class="btn sec sm" onclick="copiar(AN.resultado.valor)">Copiar texto</button><button class="btn sec sm" onclick="baixarWord()">Baixar Word (.doc)</button></div>`;
+}
+function baixarWord(){ const html=`<html><head><meta charset="utf-8"><style>body{font-family:Arial;font-size:12pt;line-height:1.5}table{border-collapse:collapse}td,th{border:1px solid #999;padding:4px}</style></head><body>${md(AN.resultado.valor)}</body></html>`; baixar(`${AN.modo}-${new Date().toISOString().slice(0,10)}.doc`,html,"application/msword"); }
+function ligarDrop(dropId,inputId,alvo,multi){
+  const d=$(dropId), f=$(inputId); if(!d) return;
+  d.onclick=()=>f.click();
+  d.ondragover=e=>{e.preventDefault();d.style.borderColor="var(--accent)";};
+  d.ondrop=e=>{e.preventDefault();processa([...e.dataTransfer.files]);};
+  f.onchange=()=>processa([...f.files]);
+  async function processa(files){
+    if(!files.length) return;
+    let acc="";
+    for(const file of files){
+      d.innerHTML=`<span class="small">Lendo <b>${esc(file.name)}</b>…</span>`;
+      try{ const t=await lerArquivo(file,(p,n)=>{d.innerHTML=`<span class="small">Lendo <b>${esc(file.name)}</b> — página ${p}/${n}</span>`;}); acc+=(multi?`\n\n===== ${file.name} =====\n`:"")+t; }
+      catch(e){ toast("Não consegui ler "+file.name+": "+e.message); }
+    }
+    AN[alvo]=multi&&AN[alvo]?AN[alvo]+"\n"+acc:acc; render(); toast(files.length+" arquivo(s) lido(s) ✔");
+  }
+}
+function coletarAnalise(){
+  AN.licId=$("#aLic").value; AN.edital=$("#tEdital").value;
+  if($("#tDocs")) AN.docs=$("#tDocs").value; if($("#tAta")) AN.ata=$("#tAta").value; if($("#aConc")) AN.concId=$("#aConc").value;
+}
+function montarPrompt(json){
+  const lic=S.licitacoes.find(l=>l.id===AN.licId), conc=S.concorrentes.find(c=>c.id===AN.concId);
+  const lim=s=>s.length>180000?s.slice(0,180000)+"\n[... texto truncado por tamanho ...]":s;
+  if(AN.modo==="enquadramento") return promptEnquadramento(lim(AN.edital),lic,json);
+  if(AN.modo==="impugnacao") return promptImpugnacao(lim(AN.edital),lic);
+  return promptRecurso(lim(AN.edital).slice(0,120000),lim(AN.docs).slice(0,100000),conc,lic,AN.ata);
+}
+function posAnalise(){
+  ligarDrop("#dEdital","#fEdital","edital",false);
+  ligarDrop("#dDocs","#fDocs","docs",true);
+  $("#tEdital").oninput=e=>{AN.edital=e.target.value;$("#cEdital").textContent=AN.edital.length.toLocaleString("pt-BR")+" caracteres";};
+  ["#aLic","#aConc","#tDocs","#tAta"].forEach(s=>{const el=$(s); if(el) el.onchange=coletarAnalise;});
+  $("#aCopiar").onclick=()=>{ coletarAnalise(); if(!AN.edital.trim()){toast("Envie ou cole o edital primeiro");return;} if(AN.modo==="recurso"&&!AN.docs.trim()){toast("Inclua os documentos do concorrente");return;} copiar(montarPrompt(false)); };
+  const rb=$("#aRodar"); if(rb) rb.onclick=rodarIA;
+}
+async function rodarIA(){
+  coletarAnalise();
+  if(!AN.edital.trim()){toast("Envie ou cole o edital primeiro");return;}
+  if(AN.modo==="recurso"&&!AN.docs.trim()){toast("Inclua os documentos do concorrente");return;}
+  AN.busy=true; AN.resultado=null; render();
+  const json=AN.modo==="enquadramento";
+  try{
+    const res=await sampleFn(montarPrompt(json),{modelTier:"complex",onText:({text})=>{const el=$("#aStream"); if(el && !json){ el.style.color=""; el.innerHTML=md(text);} else if(el){ el.textContent="Montando o checklist… ("+text.length+" caracteres)"; }}});
+    let txt=res.text||"";
+    if(json){ let v=null; try{ v=JSON.parse(txt.slice(txt.indexOf("{"),txt.lastIndexOf("}")+1)); }catch(e){}
+      if(v){ AN.resultado={tipo:"json",valor:v}; const l=S.licitacoes.find(x=>x.id===AN.licId); if(l){ l.analise=v; if(l.status==="analise"||!l.status) l.status={apta:"apta",apta_com_pendencias:"pendencias",inapta:"inapta"}[v.veredito]||l.status; salvar(); } }
+      else AN.resultado={tipo:"md",valor:txt};
+    } else { AN.resultado={tipo:"md",valor:txt}; const l=S.licitacoes.find(x=>x.id===AN.licId); if(l){ (l.docsGerados=l.docsGerados||[]).push({tipo:AN.modo,em:new Date().toISOString(),texto:txt.slice(0,60000)}); salvar(); } }
+    if(res.truncated) toast("A resposta foi cortada por tamanho — peça novamente ou use o modo prompt.");
+  }catch(e){
+    AN.resultado={tipo:"md",valor:`**Não foi possível concluir a análise aqui** (${e.code||""} ${e.message||e}).\n\nUse o botão **Copiar prompt** e cole no Claude.`};
+  }
+  AN.busy=false; render();
+}
+
+/* ================= PÁGINA: CONCORRENTES ================= */
+function pgConcorrentes(){
+  const comuns=sociosEmComum();
+  return header("Concorrentes","Puxe os dados da Receita de quem disputa com você e veja os sinais de alerta automaticamente.")+
+  `<div class="card"><div class="row"><div><label>CNPJ do concorrente</label><input id="cCnpj" inputmode="numeric" placeholder="00.000.000/0000-00"></div><div><label>Vincular à licitação (opcional)</label><select id="cLic"><option value="">—</option>${S.licitacoes.map(l=>`<option value="${l.id}">${esc(l.objeto.slice(0,70))}</option>`).join("")}</select></div><div class="fit"><button class="btn" id="cAdd">Consultar e adicionar</button></div></div><div id="cMsg"></div></div>
+  ${comuns.length?`<div class="card" style="margin-top:16px;border-color:#fecaca"><h2>🚩 Sócios em comum entre empresas</h2>${comuns.map(c=>`<div class="flag bad"><div>⚠️</div><div><b>${esc(c.nome)}</b> aparece em: ${c.empresas.map(esc).join(" · ")}<div class="small">Se essas empresas disputaram o mesmo item, pode ser indício de conluio ou de quebra do sigilo das propostas. Vale citar no recurso e pedir apuração.</div></div></div>`).join("")}</div>`:""}
+  <div class="stack" style="margin-top:16px">${S.concorrentes.length?S.concorrentes.map(cardConc).join(""):`<div class="empty">Nenhum concorrente cadastrado ainda.</div>`}</div>`;
+}
+function cardConc(c){
+  const d=c.dados, lic=S.licitacoes.find(l=>l.id===c.licId);
+  const fl=flagsEmpresa(d, lic?.objeto);
+  const cn=c.cnpj;
+  const links=[["Certidão consolidada TCU (CEIS, CNEP, inidôneos, CNJ)","https://certidoes-apf.apps.tcu.gov.br/"],["CEIS — Portal da Transparência","https://portaldatransparencia.gov.br/sancoes/ceis"],["CNEP — Portal da Transparência","https://portaldatransparencia.gov.br/sancoes/cnep"],["CND Federal (Receita)","https://solucoes.receita.fazenda.gov.br/Servicos/certidaointernet/PJ/Emitir"],["CRF FGTS (Caixa)","https://consulta-crf.caixa.gov.br/consultacrf/pages/consultaEmpregador.jsf"],["CNDT (TST)","https://cndt-certidao.tst.jus.br/inicio.faces"],["Contratos no PNCP","https://pncp.gov.br/app/contratos?q="+cn]];
+  return `<div class="card"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><div><div style="font-weight:800;font-size:16px">${esc(d?.razao||"(sem dados)")}</div><div class="small muted">CNPJ ${fmtCNPJ(cn)}${lic?` · Licitação: ${esc(lic.objeto.slice(0,60))}…`:""}</div></div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn sm" onclick="AN.modo='recurso';AN.concId='${c.id}';AN.licId='${c.licId||""}';AN.resultado=null;ir('analise')">Analisar p/ recurso</button><button class="btn sec sm" onclick="reconsultar('${c.id}')">Atualizar</button><button class="btn ghost sm" onclick="notasConc('${c.id}')">Notas</button><button class="btn ghost sm" onclick="confirmar('Remover concorrente?',()=>{S.concorrentes=S.concorrentes.filter(x=>x.id!=='${c.id}');salvar();render();})">Remover</button></div></div>
+  <div class="grid g2" style="margin-top:12px"><div>${fl.map(([t,m])=>`<div class="flag ${t}"><div>${{bad:"⛔",warn:"⚠️",ok:"✅",info:"ℹ️"}[t]}</div><div>${m}</div></div>`).join("")||'<div class="muted small">Sem dados para análise.</div>'}</div>
+  <div>${d?`<details><summary class="small" style="cursor:pointer;font-weight:600">Dados completos da Receita</summary>${blocoDadosEmpresa(d)}</details>`:""}<h3>Verificações externas</h3><div class="small">${links.map(([n,u])=>`<div><a href="${u}" target="_blank" rel="noopener">${n} ↗</a></div>`).join("")}</div><div class="small muted" style="margin-top:6px">Tenha o CNPJ ${fmtCNPJ(cn)} à mão. <button class="btn ghost sm" onclick="copiar('${cn}')">copiar CNPJ</button></div>${c.notas?`<div class="flag info" style="margin-top:8px"><div>📝</div><div class="small">${esc(c.notas)}</div></div>`:""}</div></div></div>`;
+}
+function notasConc(id){ const c=S.concorrentes.find(x=>x.id===id); modal(`<h2>Notas sobre o concorrente</h2><p class="small muted">Ex.: preço ofertado, marca, observações da sessão, certidões consultadas.</p><textarea id="nc" style="min-height:180px">${esc(c.notas||"")}</textarea><div class="right"><button class="btn" id="ncOk">Salvar</button></div>`,m=>m.querySelector("#ncOk").onclick=()=>{c.notas=$("#nc").value;salvar();fecharModal();render();}); }
+async function reconsultar(id){ const c=S.concorrentes.find(x=>x.id===id); toast("Consultando…"); try{ c.dados=await consultarCNPJ(c.cnpj); salvar(); render(); toast("Atualizado ✔"); }catch(e){ toast(e.message==="bloqueado"?"Sem acesso à internet nesta versão — use a versão baixada.":e.message); } }
+function posConcorrentes(){
+  const cn=$("#cCnpj"); cn.addEventListener("input",()=>{ const v=soDig(cn.value).slice(0,14); cn.value=v.length===14?fmtCNPJ(v):v; });
+  $("#cAdd").onclick=async()=>{
+    const c=soDig(cn.value); if(!cnpjValido(c)){ $("#cMsg").innerHTML=`<div class="flag bad"><div>✕</div><div>CNPJ inválido.</div></div>`; return; }
+    if(S.concorrentes.some(x=>x.cnpj===c)){ toast("Já cadastrado"); return; }
+    const b=$("#cAdd"); b.disabled=true; b.innerHTML='<span class="spin"></span> Consultando…';
+    let dados=null;
+    try{ dados=await consultarCNPJ(c); }
+    catch(e){ if(e.message!=="bloqueado"){ $("#cMsg").innerHTML=`<div class="flag bad"><div>✕</div><div>${esc(e.message)}</div></div>`; b.disabled=false; b.textContent="Consultar e adicionar"; return; } toast("Sem acesso à Receita aqui — cadastrado só com o CNPJ."); }
+    S.concorrentes.unshift({id:uid(),cnpj:c,dados,licId:$("#cLic").value,notas:"",criadoEm:new Date().toISOString()}); salvar(); render();
+  };
+}
+
+/* ================= PÁGINA: CONFIGURAÇÕES ================= */
+function pgConfig(){
+  const tam=(()=>{try{return (localStorage.getItem(STORE_KEY)||"").length;}catch(e){return 0;}})();
+  return header("Configurações","Backup, restauração e informações do sistema.")+
+  `<div class="grid g2"><div class="card"><h2>Backup dos dados</h2><p class="small muted">Tudo fica salvo apenas neste navegador (${(tam/1024).toFixed(0)} KB). Faça backup com frequência e para levar os dados a outro computador.</p>
+   <div class="row"><button class="btn fit" id="bExp">Baixar backup (.json)</button><button class="btn sec fit" id="bCop">Copiar backup</button></div>
+   <h3>Restaurar</h3><div class="drop" id="dImp"><b>Enviar arquivo de backup</b><input type="file" accept=".json" class="hide" id="fImp"></div>
+   <label>…ou cole o conteúdo do backup</label><textarea id="tImp" style="min-height:70px"></textarea><div class="right"><button class="btn sec sm" id="bImp">Restaurar do texto</button></div>
+  </div>
+  <div class="card"><h2>Sobre</h2><dl class="dl small">
+   <dt>Versão</dt><dd>LicitaRadar ${VERSAO}</dd>
+   <dt>Dados de CNPJ</dt><dd>Dados abertos da Receita Federal via BrasilAPI, Minha Receita e CNPJ.ws (gratuitos, sem chave)</dd>
+   <dt>Licitações</dt><dd>PNCP — API pública de consultas (pncp.gov.br/api/consulta)</dd>
+   <dt>IA</dt><dd>${sampleFn?"Integrada (Claude)":"Modo prompt (copiar e colar no Claude)"}</dd>
+   <dt>Base legal</dt><dd>Lei 14.133/2021 · LC 123/2006 · jurisprudência do TCU</dd></dl>
+   <h3>Zona de perigo</h3><button class="btn danger sm" onclick="confirmar('Apagar TODOS os dados deste navegador? Faça backup antes.',()=>{S=vazio();salvar();render();toast('Dados apagados');})">Apagar todos os dados</button>
+  </div></div>`;
+}
+function posConfig(){
+  const dump=()=>JSON.stringify({app:"LicitaRadar",versao:VERSAO,exportadoEm:new Date().toISOString(),dados:S},null,1);
+  $("#bExp").onclick=()=>baixar(`licitaradar-backup-${new Date().toISOString().slice(0,10)}.json`,dump(),"application/json");
+  $("#bCop").onclick=()=>copiar(dump());
+  const restaurar=txt=>{ try{ const j=JSON.parse(txt); const d=j.dados||j; if(!d.empresa||!d.licitacoes) throw new Error("formato"); S=Object.assign(vazio(),d); salvar(); render(); toast("Backup restaurado ✔"); }catch(e){ toast("Arquivo de backup inválido"); } };
+  $("#dImp").onclick=()=>$("#fImp").click(); $("#fImp").onchange=async()=>{ const f=$("#fImp").files[0]; if(f) restaurar(await f.text()); };
+  $("#bImp").onclick=()=>restaurar($("#tImp").value);
+}
+
+render();
+</script>
+</body>
+</html>

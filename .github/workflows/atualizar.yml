@@ -1,0 +1,71 @@
+name: Atualizar licitações e publicar
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    # 06:17, 12:17 e 18:17 no horário de Brasília (UTC-3)
+    - cron: "17 9,15,21 * * *"
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: licitaradar
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 70
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Coletar licitações abertas no PNCP
+        continue-on-error: true
+        env:
+          DIAS: "60"
+          MINUTOS: "45"
+        run: python scripts/coletar_pncp.py
+
+      - name: Salvar a base no repositório
+        run: |
+          git config user.name "licitaradar-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data
+          if git diff --cached --quiet; then
+            echo "Sem mudanças na base."
+          else
+            git commit -m "dados: atualização automática do PNCP [skip ci]"
+            git pull --rebase origin main || true
+            git push || echo "::warning::Não consegui salvar a base no repositório (o site será publicado mesmo assim)."
+          fi
+
+      - name: Preparar site
+        run: |
+          mkdir -p _site
+          cp index.html .nojekyll _site/
+          cp -r data _site/data
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
