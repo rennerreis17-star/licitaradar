@@ -106,6 +106,15 @@ tr:last-child td{border-bottom:0}
 .pill-status{font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px}
 .stack>*+*{margin-top:16px}
 .hide{display:none!important}
+.ob-bg{position:fixed;inset:0;z-index:95;background:radial-gradient(1200px 700px at 10% 110%,rgba(14,159,110,.35),transparent),linear-gradient(160deg,#0b1f3a,#12305a);display:grid;place-items:center;padding:16px;overflow:auto;animation:obIn .35s ease}
+.ob-card{background:#fff;border-radius:22px;padding:26px 22px;width:min(480px,100%);box-shadow:0 30px 80px rgba(0,0,0,.35);animation:obUp .4s ease}
+.logo-big{width:76px;height:76px;border-radius:22px;background:var(--accent);display:grid;place-items:center;margin:0 auto;box-shadow:0 10px 30px rgba(14,159,110,.45)}
+.ob-feat{display:flex;gap:12px;align-items:flex-start;padding:11px 12px;border:1px solid var(--line);border-radius:14px;margin-top:8px}.ob-feat>div:first-child{font-size:22px}
+.ob-emp{margin-top:14px;padding:14px;border-radius:14px;background:#f0fdf4;border:1px solid #bbf7d0;animation:obUp .3s ease}
+.ob-chip{border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:8px 13px;font:inherit;font-weight:600;font-size:13.5px;cursor:pointer;color:var(--ink)}
+.ob-chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.rcard{transition:transform .15s,box-shadow .15s}.rcard:hover{transform:translateY(-2px);box-shadow:0 8px 26px rgba(15,27,45,.1)}
+@keyframes obIn{from{opacity:0}to{opacity:1}}@keyframes obUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
 @media (max-width:1100px){.g4{grid-template-columns:repeat(2,minmax(0,1fr))}.g3{grid-template-columns:1fr 1fr}}
 @media (max-width:860px){
   .app{flex-direction:column}
@@ -143,7 +152,7 @@ const STORE_KEY = "licitaradar_v1";
 /* ---------------- Estado ---------------- */
 const vazio = () => ({
   empresa:{cnpj:"",dados:null,palavras:"",docs:[],atestados:[],fin:{pl:"",capital:"",lg:"",sg:"",lc:"",faturamento:""},registros:"",obs:""},
-  licitacoes:[], concorrentes:[], radar:{palavras:"",uf:"",modalidade:"6",dias:"30",paginas:"3",ultimos:[]}
+  licitacoes:[], concorrentes:[], radar:{palavras:"",uf:"",mun:"",modalidade:"",dias:"30",vmin:"",ordem:"ader",paginas:"3",ultimos:[]}, intro:false
 });
 let S = vazio();
 try{ const raw = localStorage.getItem(STORE_KEY); if(raw) S = Object.assign(vazio(), JSON.parse(raw)); }catch(e){}
@@ -529,7 +538,7 @@ function render(){
   renderNav();
   const fn={painel:pgPainel,empresa:pgEmpresa,radar:pgRadar,licitacoes:pgLicitacoes,analise:pgAnalise,concorrentes:pgConcorrentes,config:pgConfig}[pagina];
   $("#main").innerHTML=fn();
-  const after={empresa:posEmpresa,radar:posRadar,analise:posAnalise,concorrentes:posConcorrentes,config:posConfig}[pagina];
+  const after={painel:posPainel,empresa:posEmpresa,radar:posRadar,analise:posAnalise,concorrentes:posConcorrentes,config:posConfig}[pagina];
   after&&after();
 }
 const header=(t,s,extra="")=>`<div class="top"><div><h1>${t}</h1><p>${s}</p></div><div class="row" style="flex:0 0 auto">${extra}</div></div>`;
@@ -549,7 +558,7 @@ function pgPainel(){
   const feitos=passos.filter(p=>p[0]).length;
   return header("Painel", emp?`${esc(emp.razao)} · CNPJ ${fmtCNPJ(S.empresa.cnpj)}`:"Visão geral das suas licitações", `<button class="btn" onclick="ir('radar')">Buscar licitações</button>`)+
   (feitos<4?`<div class="card" style="margin-bottom:16px"><h2>Primeiros passos <span class="chip">${feitos}/4</span></h2>${passos.map(([ok,t,p])=>`<div class="flag ${ok?"ok":"info"}" style="cursor:pointer" onclick="ir('${p}')"><div>${ok?"✅":"➡️"}</div><div>${t}</div></div>`).join("")}</div>`:"")+
-  `<div class="grid g4">
+  `<div id="pOpo"></div><div class="grid g4">
     <div class="card kpi"><div class="lbl">Em acompanhamento</div><div class="val">${ativos.length}</div><div class="sub">${L.length} no total</div></div>
     <div class="card kpi"><div class="lbl">Aptas</div><div class="val" style="color:var(--ok)">${L.filter(l=>l.status==="apta").length}</div><div class="sub">${L.filter(l=>l.status==="pendencias").length} com pendências</div></div>
     <div class="card kpi"><div class="lbl">Valor em disputa</div><div class="val" style="font-size:22px;padding-top:6px">${brl(ativos.reduce((s,l)=>s+(+l.valor||0),0))}</div><div class="sub">estimado pelos órgãos</div></div>
@@ -562,6 +571,19 @@ function pgPainel(){
   <div class="card" style="margin-top:16px"><h2>Funil <button class="btn sec sm" onclick="ir('licitacoes')">Ver todas</button></h2>
     <div class="row">${Object.entries(STATUS).map(([k,[n,c]])=>`<div class="fit" style="padding:10px 14px;border:1px solid var(--line);border-radius:12px;min-width:120px"><div class="small muted">${n}</div><div style="font-size:22px;font-weight:800">${L.filter(l=>(l.status||"analise")===k).length}</div></div>`).join("")}</div>
   </div>`;
+}
+
+async function posPainel(){
+  const r=S.radar, el=$("#pOpo"); if(!el) return;
+  const meta=await carregarMeta(); if(!meta||!meta.total||!r.uf||!(r.palavras||S.empresa.palavras)) return;
+  const todos=await dadosBase(r.uf); if(!$("#pOpo")) return;
+  const fil=filtrarRadar(todos,{...r,palavras:r.palavras||S.empresa.palavras,ordem:"ader",dias:"30"});
+  const salvos=new Set(S.licitacoes.map(l=>l.pncpId).filter(Boolean)); const top=fil.filter(l=>!salvos.has(l.pncpId)).slice(0,4);
+  if(!top.length) return;
+  S.radar.ultimos=fil.slice(0,500);
+  el.innerHTML=`<div class="card" style="margin-bottom:16px;border-color:#bbf7d0;background:linear-gradient(180deg,#f3fbf7,#fff)"><h2>✨ Oportunidades para você <span class="small muted" style="font-weight:500">${fil.length} abertas ${r.mun?"em "+esc(r.mun):"no "+esc(r.uf)}</span></h2>
+  <div class="list">${top.map(l=>{const i=S.radar.ultimos.indexOf(l);return `<div class="it"><div style="min-width:0"><div class="t">${esc(limpaObj(l.objeto).slice(0,120))}${limpaObj(l.objeto).length>120?"…":""}</div><div class="small muted">${esc(l.orgao)} · ${esc(l.municipio)} · ${l.valor?brl(l.valor):"valor sigiloso"}</div><div style="margin-top:4px">${prazoChip(l.encerramento)}</div></div><div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0"><button class="btn sm" onclick="salvarRadar(${i});render()">☆ Salvar</button><a class="btn ghost sm" href="${esc(l.link)}" target="_blank" rel="noopener">PNCP ↗</a></div></div>`}).join("")}</div>
+  <div class="right"><button class="btn sec sm" onclick="ir('radar')">Ver todas no Radar →</button></div></div>`;
 }
 
 /* ================= PÁGINA: MINHA EMPRESA ================= */
@@ -648,57 +670,112 @@ function delDoc(id){ S.empresa.docs=S.empresa.docs.filter(d=>d.id!==id); salvar(
 function delAt(id){ S.empresa.atestados=S.empresa.atestados.filter(d=>d.id!==id); salvar(); render(); }
 
 /* ================= PÁGINA: RADAR PNCP ================= */
-let radarBusy=false;
+let radarBusy=false, radarVis=30, radarTimer=null;
+const limpaObj=o=>{ let t=String(o||"").replace(/^\s*\[[^\]]+\]\s*-?\s*/,"").trim(); const up=(t.match(/[A-ZÀ-Ú]/g)||[]).length, lo=(t.match(/[a-zà-ú]/g)||[]).length; if(up>lo*2&&t.length>12){ t=t.toLowerCase(); t=t.charAt(0).toUpperCase()+t.slice(1); } return t; };
 function pgRadar(){
   const r=S.radar;
-  return header("Radar PNCP","Licitações com propostas abertas no Portal Nacional de Contratações Públicas — todo o Brasil.")+
-  `<div class="card"><div class="grid g4">
-    <div style="grid-column:span 2"><label>Palavras-chave (separadas por vírgula)</label><input id="rPal" value="${esc(r.palavras||S.empresa.palavras)}" placeholder="ex.: limpeza, conservação"></div>
-    <div><label>UF</label><select id="rUf"><option value="">Brasil inteiro</option>${UFS.map(u=>`<option ${u===r.uf?"selected":""}>${u}</option>`).join("")}</select></div>
+  return header("Radar PNCP","Licitações com propostas abertas em todo o Brasil — filtre por estado, cidade, valor e prazo.")+
+  `<div class="card"><div id="rInfo"></div><div class="grid g4">
+    <div style="grid-column:span 2"><label>O que você procura? <span class="muted" style="font-weight:500">(vírgula separa · use -palavra para excluir)</span></label><input id="rPal" value="${esc(r.palavras||S.empresa.palavras)}" placeholder="ex.: limpeza, conservação, -hospitalar"></div>
+    <div><label>Estado</label><select id="rUf"><option value="">Brasil inteiro</option>${UFS.map(u=>`<option ${u===r.uf?"selected":""}>${u}</option>`).join("")}</select></div>
+    <div><label>Cidade</label><select id="rMun"><option value="">${r.uf?"Todas as cidades":"Escolha um estado"}</option></select></div>
     <div><label>Modalidade</label><select id="rMod">${Object.entries(MODALIDADES).map(([k,n])=>`<option value="${k}" ${k===r.modalidade?"selected":""}>${n}</option>`).join("")}</select></div>
-    <div><label>Propostas encerrando nos próximos</label><select id="rDias">${["7","15","30","60","90"].map(x=>`<option value="${x}" ${x===r.dias?"selected":""}>${x} dias</option>`).join("")}</select></div>
-    <div><label>Profundidade da busca</label><select id="rPag">${[["1","Rápida (50)"],["3","Normal (150)"],["6","Ampla (300)"],["10","Máxima (500)"]].map(([k,n])=>`<option value="${k}" ${k===r.paginas?"selected":""}>${n}</option>`).join("")}</select></div>
-    <div style="grid-column:span 2;display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap"><button class="btn" id="rBuscar">Buscar no PNCP</button><a class="btn sec" id="rAbrir" target="_blank" rel="noopener">Abrir no site do PNCP ↗</a><button class="btn sec" id="rManual">+ Cadastrar manualmente</button></div>
+    <div><label>Encerra em até</label><select id="rDias">${["3","7","15","30","60"].map(x=>`<option value="${x}" ${x===r.dias?"selected":""}>${x} dias</option>`).join("")}</select></div>
+    <div><label>Valor mínimo (R$)</label><input id="rVmin" inputmode="numeric" placeholder="0" value="${esc(r.vmin||"")}"></div>
+    <div><label>Ordenar por</label><select id="rOrd">${[["ader","Mais aderentes à empresa"],["prazo","Prazo mais próximo"],["valor","Maior valor"]].map(([k,n])=>`<option value="${k}" ${k===(r.ordem||"ader")?"selected":""}>${n}</option>`).join("")}</select></div>
+    <div id="rPagBox" class="hide"><label>Profundidade (busca ao vivo)</label><select id="rPag">${[["1","Rápida (50)"],["3","Normal (150)"],["6","Ampla (300)"]].map(([k,n])=>`<option value="${k}" ${k===r.paginas?"selected":""}>${n}</option>`).join("")}</select></div>
   </div>
-  <div id="rInfo"></div>
-  <div id="rProg" class="hide"><div class="progress"><i id="rBar"></i></div><div class="small muted" id="rTxt" style="margin-top:6px"></div></div>
-  <p class="small muted" style="margin-bottom:0">O PNCP pode levar de 10 a 20 segundos por página. As palavras-chave são filtradas aqui no painel; a compatibilidade compara o objeto com seus CNAEs e palavras-chave.</p></div>
-  <div id="rRes" style="margin-top:16px">${tabelaRadar(r.ultimos||[])}</div>`;
+  <div class="row" style="margin-top:14px"><button class="btn fit hide" id="rBuscar">Buscar no PNCP</button><a class="btn sec fit" id="rAbrir" target="_blank" rel="noopener">Abrir no site do PNCP ↗</a><button class="btn sec fit" id="rManual">+ Cadastrar manualmente</button></div>
+  <div id="rProg" class="hide"><div class="progress"><i id="rBar"></i></div></div><div class="small muted" id="rTxt" style="margin-top:8px"></div>
+  </div>
+  <div id="rRes" style="margin-top:16px">${listaRadar(r.ultimos||[])}</div>`;
 }
-function tabelaRadar(lista){
-  if(!lista.length) return `<div class="empty">Faça uma busca para ver as licitações abertas.</div>`;
+function prazoChip(enc){ const d=diasAte(enc); if(d===null) return ""; return `<span class="chip ${d<=2?"bad":d<=7?"warn":""}">⏱ ${d<0?"encerrada":d===0?"encerra hoje":d===1?"encerra amanhã":"encerra em "+d+" dias"}</span>`; }
+function cardRadar(l,i,salvos){
+  const sc=compatCNAE(l.objeto,S.empresa.dados,S.empresa.palavras); const ob=limpaObj(l.objeto); const ja=l.pncpId&&salvos.has(l.pncpId);
+  return `<div class="card rcard"><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px"><span class="chip ${sc.nivel==="Alta"?"ok":sc.nivel==="Média"?"warn":""}" title="${esc(sc.hits.join(", "))}">◎ Aderência ${sc.nivel.toLowerCase()}</span>${prazoChip(l.encerramento)}<span class="chip">${esc(l.modalidade)}${l.srp?" · SRP":""}</span></div>
+  <div style="font-weight:700;line-height:1.4">${esc(ob.slice(0,260))}${ob.length>260?"…":""}</div>
+  <div class="small muted" style="margin-top:4px">🏛 ${esc(l.orgao)} · 📍 ${esc(l.municipio)}/${esc(l.uf)}</div>
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px"><div><span class="small muted">Valor estimado</span><div style="font-weight:800;font-size:17px">${l.valor?brl(l.valor):"sigiloso / não informado"}</div></div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap">${ja?'<span class="chip ok">✓ Salva</span>':`<button class="btn sm" onclick="salvarRadar(${i})">☆ Salvar</button>`}<button class="btn sec sm" onclick="salvarRadar(${i},true)">✨ Analisar</button><a class="btn ghost sm" href="${esc(l.link)}" target="_blank" rel="noopener">PNCP ↗</a>${l.linkOrigem?`<a class="btn ghost sm" href="${esc(l.linkOrigem)}" target="_blank" rel="noopener">Sistema ↗</a>`:""}</div></div></div>`;
+}
+function listaRadar(lista){
+  if(!lista.length) return `<div class="empty">Nenhuma licitação com esses filtros.<br><span class="small">Tente outras palavras, outra cidade ou um prazo maior.</span></div>`;
   const salvos=new Set(S.licitacoes.map(l=>l.pncpId).filter(Boolean));
-  return `<div class="card"><h2>${lista.length} licitação(ões) encontrada(s)</h2><div class="tbl"><table><thead><tr><th>Objeto</th><th>Órgão / Local</th><th>Valor estimado</th><th>Encerra</th><th>Aderência</th><th></th></tr></thead><tbody>
-  ${lista.map((l,i)=>{const sc=compatCNAE(l.objeto,S.empresa.dados,S.empresa.palavras);const d=diasAte(l.encerramento);return `<tr><td style="min-width:260px"><div style="font-weight:600">${esc(l.objeto.slice(0,220))}${l.objeto.length>220?"…":""}</div><div class="small muted">${esc(l.modalidade)}${l.srp?" · SRP":""} · <a href="${esc(l.link)}" target="_blank" rel="noopener">ver no PNCP ↗</a></div></td><td class="small">${esc(l.orgao)}<br><span class="muted">${esc(l.municipio)}/${esc(l.uf)}</span></td><td style="white-space:nowrap">${brl(l.valor)}</td><td style="white-space:nowrap">${fmtData(l.encerramento)}<br><span class="small muted">${d!==null?(d<0?"encerrada":d+" dias"):""}</span></td><td><span class="chip ${sc.nivel==="Alta"?"ok":sc.nivel==="Média"?"warn":""}" title="${esc(sc.hits.join(", "))}">${sc.nivel}</span></td><td>${l.pncpId&&salvos.has(l.pncpId)?'<span class="chip ok">Salva</span>':`<button class="btn sm" onclick="salvarRadar(${i})">Salvar</button>`}</td></tr>`}).join("")}
-  </tbody></table></div></div>`;
+  const tot=lista.reduce((s,l)=>s+(+l.valor||0),0), urg=lista.filter(l=>{const d=diasAte(l.encerramento);return d!==null&&d<=7;}).length;
+  return `<div class="grid g3" style="margin-bottom:14px"><div class="card kpi"><div class="lbl">Encontradas</div><div class="val">${lista.length}</div></div><div class="card kpi"><div class="lbl">Valor somado</div><div class="val" style="font-size:20px;padding-top:6px">${brl(tot)}</div></div><div class="card kpi"><div class="lbl">Encerram em 7 dias</div><div class="val" style="color:var(--warn)">${urg}</div></div></div>
+  <div class="grid g2">${lista.slice(0,radarVis).map((l,i)=>cardRadar(l,i,salvos)).join("")}</div>
+  ${lista.length>radarVis?`<div class="right" style="justify-content:center"><button class="btn sec" onclick="radarVis+=30;$('#rRes').innerHTML=listaRadar(S.radar.ultimos)">Mostrar mais (${lista.length-radarVis} restantes)</button></div>`:""}`;
 }
-function salvarRadar(i){ const l={...S.radar.ultimos[i],id:uid(),status:"analise",notas:"",criadoEm:new Date().toISOString()}; S.licitacoes.unshift(l); salvar(); render(); toast("Licitação salva em Minhas licitações"); }
+function salvarRadar(i,analisar){
+  const src=S.radar.ultimos[i]; let l=src.pncpId&&S.licitacoes.find(x=>x.pncpId===src.pncpId);
+  if(!l){ l={...src,objeto:limpaObj(src.objeto),id:uid(),status:"analise",notas:"",criadoEm:new Date().toISOString()}; S.licitacoes.unshift(l); salvar(); }
+  if(analisar){ abrirAnalise(l.id,"enquadramento"); toast("Salva — agora envie o PDF do edital"); return; }
+  const box=$("#rRes"); if(box){ const y=window.scrollY; box.innerHTML=listaRadar(S.radar.ultimos); window.scrollTo(0,y); } toast("⭐ Salva em Minhas licitações");
+}
+function filtrarRadar(todos,r){
+  const ate=Date.now()+(+r.dias||30)*864e5, agora=Date.now();
+  const termos=(r.palavras||"").split(",").map(s=>semAcento(s).trim()).filter(Boolean);
+  const pos=termos.filter(k=>!k.startsWith("-")), neg=termos.filter(k=>k.startsWith("-")).map(k=>k.slice(1).trim()).filter(Boolean);
+  const mun=semAcento(r.mun||""), vmin=+String(r.vmin||"").replace(/\D/g,"")||0;
+  let fil=todos.filter(l=>{ const t=new Date(l.encerramento).getTime(); if(l.encerramento && (t<agora||t>ate)) return false;
+    if(r.modalidade && l.mc!==undefined && String(l.mc)!==r.modalidade) return false;
+    if(mun && semAcento(l.municipio)!==mun) return false;
+    if(vmin && !(+l.valor>=vmin)) return false;
+    const o=semAcento(l.objeto); if(neg.some(k=>o.includes(k))) return false; if(pos.length && !pos.some(k=>o.includes(k))) return false; return true; });
+  const ad=l=>compatCNAE(l.objeto,S.empresa.dados,S.empresa.palavras).pts;
+  if(r.ordem==="prazo") fil.sort((a,b)=>new Date(a.encerramento)-new Date(b.encerramento));
+  else if(r.ordem==="valor") fil.sort((a,b)=>(+b.valor||0)-(+a.valor||0));
+  else fil.sort((a,b)=>ad(b)-ad(a) || new Date(a.encerramento)-new Date(b.encerramento));
+  return fil;
+}
+async function dadosBase(uf,prog){
+  const meta=await carregarMeta(); if(!meta||!meta.total) return null;
+  const ufs=uf?[uf]:Object.keys(meta.por_uf||{}).filter(u=>meta.por_uf[u]>0); let todos=[];
+  for(let i=0;i<ufs.length;i++){ prog&&prog(i,ufs.length,ufs[i]); todos=todos.concat(await carregarUF(ufs[i])); }
+  return todos;
+}
 function posRadar(){
   const r=S.radar;
-  const sync=()=>{ r.palavras=$("#rPal").value; r.uf=$("#rUf").value; r.modalidade=$("#rMod").value; r.dias=$("#rDias").value; r.paginas=$("#rPag").value; salvar();
-    const q=r.palavras.split(",")[0]?.trim()||""; $("#rAbrir").href=`https://pncp.gov.br/app/editais?q=${encodeURIComponent(q)}&status=recebendo_proposta&pagina=1`; };
-  ["#rPal","#rUf","#rMod","#rDias","#rPag"].forEach(s=>$(s).addEventListener("change",sync)); sync();
+  const sync=()=>{ r.palavras=$("#rPal").value; r.uf=$("#rUf").value; r.mun=$("#rMun").value; r.modalidade=$("#rMod").value; r.dias=$("#rDias").value; r.vmin=$("#rVmin").value; r.ordem=$("#rOrd").value; r.paginas=$("#rPag").value; salvar();
+    const q=(r.palavras.split(",").find(s=>s.trim()&&!s.trim().startsWith("-"))||"").trim(); $("#rAbrir").href=`https://pncp.gov.br/app/editais?q=${encodeURIComponent(q)}&status=recebendo_proposta&pagina=1`; };
+  const popMun=async()=>{
+    const sel=$("#rMun"); if(!sel) return;
+    if(!r.uf){ sel.innerHTML=`<option value="">Escolha um estado</option>`; sel.disabled=true; return; }
+    sel.disabled=false; const base=await dadosBase(r.uf);
+    const cont={}; (base||[]).forEach(l=>{ if(l.municipio) cont[l.municipio]=(cont[l.municipio]||0)+1; });
+    const nomes=Object.keys(cont).sort((a,b)=>a.localeCompare(b,"pt"));
+    sel.innerHTML=`<option value="">Todas as cidades${base?` (${nomes.length})`:""}</option>`+nomes.map(n=>`<option value="${esc(n)}" ${semAcento(n)===semAcento(r.mun||"")?"selected":""}>${esc(n)} (${cont[n]})</option>`).join("");
+    if(!base){ sel.innerHTML=`<option value="">Todas as cidades</option>`+(r.mun?`<option selected>${esc(r.mun)}</option>`:""); }
+  };
+  const filtrar=async()=>{
+    sync(); const meta=await carregarMeta(); if(!meta||!meta.total) return;
+    const pr=$("#rProg"); const todos=await dadosBase(r.uf,(i,n,u)=>{ if(n>1){ pr.classList.remove("hide"); $("#rBar").style.width=(i/n*100)+"%"; $("#rTxt").textContent=`Carregando ${u} (${i+1}/${n})…`; } });
+    pr.classList.add("hide");
+    const fil=filtrarRadar(todos,r); r.ultimos=fil.slice(0,500); radarVis=30; salvar();
+    const naArea=r.mun?todos.filter(l=>semAcento(l.municipio)===semAcento(r.mun)).length:todos.length;
+    $("#rTxt").textContent=`${naArea.toLocaleString("pt-BR")} licitações abertas ${r.mun?"em "+r.mun:r.uf?"no "+r.uf:"no Brasil"} · ${fil.length} com seus filtros${fil.length>500?" (mostrando as 500 primeiras)":""}`;
+    $("#rRes").innerHTML=listaRadar(r.ultimos);
+    if(!fil.length && r.mun){ const outras=filtrarRadar(todos,{...r,mun:""}).length; if(outras) $("#rRes").innerHTML+=`<div class="right" style="justify-content:center"><button class="btn sec" onclick="S.radar.mun='';$('#rMun').value='';$('#rMun').dispatchEvent(new Event('change'))">Ver ${outras} no estado todo (${esc(r.uf)}) →</button></div>`; }
+  };
+  ["#rUf"].forEach(s=>$(s).addEventListener("change",async()=>{ $("#rMun").value=""; r.mun=""; sync(); await popMun(); filtrar(); }));
+  ["#rMun","#rMod","#rDias","#rOrd","#rPag"].forEach(s=>$(s).addEventListener("change",filtrar));
+  ["#rPal","#rVmin"].forEach(s=>$(s).addEventListener("input",()=>{ clearTimeout(radarTimer); radarTimer=setTimeout(filtrar,350); }));
   $("#rManual").onclick=()=>novaLicitacaoManual();
-  carregarMeta().then(m=>{ const el=$("#rInfo"); if(el && m && m.total) el.innerHTML=`<div class="flag ok" style="margin:0 0 12px"><div>🗂️</div><div>Base do PNCP atualizada em <b>${fmtDataHora(m.atualizado)}</b> · ${m.total.toLocaleString("pt-BR")} licitações abertas em todo o Brasil. Atualiza sozinha 3× ao dia.${m.completo===false?' <span class="small muted">(última coleta parcial)</span>':""}</div></div>`; });
-  $("#rBuscar").onclick=async()=>{
-    if(radarBusy) return; sync(); radarBusy=true;
-    const b=$("#rBuscar"); b.disabled=true; b.innerHTML='<span class="spin"></span> Buscando…';
-    $("#rProg").classList.remove("hide");
-    const meta=await carregarMeta();
-    if(meta && meta.total){
-      const ufs=r.uf?[r.uf]:Object.keys(meta.por_uf||{}).filter(u=>meta.por_uf[u]>0);
-      let todos=[];
-      for(let i=0;i<ufs.length;i++){ $("#rTxt").textContent=`Lendo base ${ufs[i]} (${i+1}/${ufs.length})…`; $("#rBar").style.width=(i/ufs.length*100)+"%"; todos=todos.concat(await carregarUF(ufs[i])); }
-      $("#rBar").style.width="100%";
-      const ate=Date.now()+(+r.dias)*864e5, agora=Date.now();
-      const kws=r.palavras.split(",").map(s=>semAcento(s).trim()).filter(Boolean);
-      let fil=todos.filter(l=>{ const t=new Date(l.encerramento).getTime(); if(l.encerramento && (t<agora||t>ate)) return false; if(r.modalidade && String(l.mc)!==r.modalidade) return false; if(kws.length){ const o=semAcento(l.objeto); return kws.some(k=>o.includes(k)); } return true; });
-      fil.sort((a,b)=>compatCNAE(b.objeto,S.empresa.dados,S.empresa.palavras).pts-compatCNAE(a.objeto,S.empresa.dados,S.empresa.palavras).pts || new Date(a.encerramento)-new Date(b.encerramento));
-      r.ultimos=fil.slice(0,300); salvar(); radarBusy=false;
-      $("#rTxt").textContent=`${todos.length.toLocaleString("pt-BR")} licitações na base · ${fil.length} batem com os filtros${fil.length>300?" (mostrando as 300 mais aderentes)":""}`;
-      b.disabled=false; b.textContent="Buscar no PNCP"; $("#rRes").innerHTML=tabelaRadar(r.ultimos); return;
+  $("#rAbrir").href="https://pncp.gov.br/app/editais?status=recebendo_proposta&pagina=1";
+  carregarMeta().then(async m=>{
+    if(m && m.total){
+      $("#rInfo").innerHTML=`<div class="flag ok" style="margin:0 0 6px"><div>🗂️</div><div>Base do PNCP de <b>${fmtDataHora(m.atualizado)}</b> · <b>${m.total.toLocaleString("pt-BR")}</b> licitações abertas no Brasil. Atualiza sozinha 3× ao dia. Os resultados mudam na hora conforme você mexe nos filtros.</div></div>`;
+      await popMun(); if(r.uf || (r.ultimos||[]).length===0) filtrar();
+    } else {
+      $("#rBuscar").classList.remove("hide"); $("#rPagBox").classList.remove("hide"); await popMun();
+      $("#rBuscar").onclick=buscarAoVivo;
     }
-    const fim=new Date(Date.now()+ (+r.dias)*864e5); const pags=+r.paginas; let todos=[], erro=null;
+  });
+  async function buscarAoVivo(){
+    if(radarBusy) return; sync(); radarBusy=true;
+    const b=$("#rBuscar"); b.disabled=true; b.innerHTML='<span class="spin"></span> Buscando…'; $("#rProg").classList.remove("hide");
+    const fim=new Date(Date.now()+(+r.dias)*864e5); const pags=+r.paginas||3; let todos=[], erro=null;
     for(let p=1;p<=pags;p++){
       $("#rTxt").textContent=`Consultando PNCP — página ${p} de ${pags}…`; $("#rBar").style.width=((p-1)/pags*100)+"%";
       let url=`https://pncp.gov.br/api/consulta/v1/contratacoes/proposta?dataFinal=${ymd(fim)}&pagina=${p}&tamanhoPagina=50`;
@@ -706,21 +783,14 @@ function posRadar(){
       try{ const j=await fetchJSON(url,60000); if(j.__vazio) break; const arr=j.data||[]; todos=todos.concat(arr.map(normPNCP)); if(j.totalPaginas && p>=j.totalPaginas) break; if(!arr.length) break; }
       catch(e){ erro=e; break; }
     }
-    $("#rBar").style.width="100%";
-    const kws=r.palavras.split(",").map(s=>semAcento(s).trim()).filter(Boolean);
-    let fil=kws.length?todos.filter(l=>{const o=semAcento(l.objeto);return kws.some(k=>o.includes(k));}):todos;
-    fil.sort((a,b)=>compatCNAE(b.objeto,S.empresa.dados,S.empresa.palavras).pts-compatCNAE(a.objeto,S.empresa.dados,S.empresa.palavras).pts || new Date(a.encerramento)-new Date(b.encerramento));
-    radarBusy=false;
+    radarBusy=false; $("#rProg").classList.add("hide"); b.disabled=false; b.textContent="Buscar no PNCP";
     if(erro && !todos.length){
-      $("#rProg").classList.add("hide"); b.disabled=false; b.textContent="Buscar no PNCP";
-      $("#rRes").innerHTML = (erro.status? `<div class="flag bad"><div>✕</div><div>O PNCP respondeu com erro (${esc(erro.message)}). Tente de novo em alguns minutos ou reduza a profundidade. Se escolheu "Todas" as modalidades, escolha uma específica.</div></div>` : avisoSemRede()) + `<div class="flag info"><div>💡</div><div>Use <b>Abrir no site do PNCP</b> para buscar lá e depois <b>Cadastrar manualmente</b> as que interessarem.</div></div>`;
-      return;
+      $("#rRes").innerHTML=(erro.status?`<div class="flag bad"><div>✕</div><div>O PNCP respondeu com erro (${esc(erro.message)}). Tente de novo em alguns minutos.</div></div>`:avisoSemRede())+`<div class="flag info"><div>💡</div><div>Use <b>Abrir no site do PNCP</b> e depois <b>Cadastrar manualmente</b>.</div></div>`; return;
     }
-    r.ultimos=fil.slice(0,300); salvar();
-    $("#rTxt").textContent=`${todos.length} licitações lidas · ${fil.length} batem com as palavras-chave${erro?" (busca interrompida: "+erro.message+")":""}`;
-    b.disabled=false; b.textContent="Buscar no PNCP";
-    $("#rRes").innerHTML=tabelaRadar(r.ultimos);
-  };
+    const fil=filtrarRadar(todos,{...r,modalidade:""}); r.ultimos=fil.slice(0,300); salvar(); radarVis=30;
+    $("#rTxt").textContent=`${todos.length} licitações lidas · ${fil.length} com seus filtros${erro?" (busca interrompida)":""}`;
+    $("#rRes").innerHTML=listaRadar(r.ultimos);
+  }
 }
 function novaLicitacaoManual(l){
   const x=l||{};
@@ -900,6 +970,63 @@ function posConcorrentes(){
   };
 }
 
+/* ================= ENTRADA INICIAL (boas-vindas) ================= */
+const OB={passo:0,dados:null,chips:new Set(),uf:"",mun:""};
+function sugestoesChips(d){
+  const base=[d?.cnaePrincipal?.descricao,...(d?.cnaesSec||[]).map(c=>c.descricao)].join(" ");
+  const ws=[...new Set(tokens(base).filter(w=>w.length>4))].slice(0,10);
+  const extras=["limpeza","manutenção","obras","material de expediente","alimentação","transporte","informática","consultoria","saúde","uniformes","combustível","eventos"];
+  return [...new Set([...ws,...extras])].slice(0,16);
+}
+function boasVindas(){
+  const p=OB.passo, d=OB.dados;
+  const dots=`<div style="display:flex;gap:6px;justify-content:center;margin:0 0 18px">${[0,1,2].map(i=>`<i style="width:${i===p?26:8}px;height:8px;border-radius:9px;background:${i<=p?"var(--accent)":"#d7dfea"};display:block;transition:.3s"></i>`).join("")}</div>`;
+  let corpo="";
+  if(p===0) corpo=`<div style="text-align:center"><div class="logo-big"><svg viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/><path d="M8 11l2 2 4-4"/></svg></div>
+    <h1 style="font-size:28px;margin:14px 0 6px;letter-spacing:-.5px">Bem-vindo ao LicitaRadar</h1><p class="muted" style="margin:0 0 18px">Encontre, organize e vença licitações em todo o Brasil.</p></div>
+    ${[["🔎","Licitações abertas do país inteiro","Atualizadas 3× ao dia, filtradas por cidade, valor e prazo."],["🏢","Sua empresa pelo CNPJ","Dados da Receita na hora e alerta de certidões vencendo."],["⚖️","IA para edital e concorrentes","Enquadramento, impugnação e recurso — tudo dentro da lei."]].map(([i,t,s])=>`<div class="ob-feat"><div>${i}</div><div><b>${t}</b><div class="small muted">${s}</div></div></div>`).join("")}
+    <button class="btn" style="width:100%;margin-top:16px;padding:14px" onclick="OB.passo=1;boasVindas()">Começar — leva 1 minuto</button>
+    <button class="btn ghost" style="width:100%;margin-top:6px" onclick="fimBoasVindas(true)">Só quero explorar</button>`;
+  if(p===1) corpo=`<h2 style="font-size:21px;margin:0 0 4px">Qual é o CNPJ da sua empresa?</h2><p class="small muted" style="margin:0 0 12px">Buscamos os dados públicos da Receita Federal automaticamente.</p>
+    <input id="obCnpj" inputmode="numeric" placeholder="00.000.000/0000-00" style="font-size:18px;padding:14px" value="${S.empresa.cnpj?fmtCNPJ(S.empresa.cnpj):""}">
+    <button class="btn" id="obBuscar" style="width:100%;margin-top:10px;padding:13px">Buscar na Receita</button><div id="obMsg"></div>
+    ${d?`<div class="ob-emp"><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">${/ativa/i.test(d.situacao)?'<span class="chip ok">ATIVA</span>':`<span class="chip bad">${esc(d.situacao)}</span>`}${d.porte?`<span class="chip">${esc(d.porte)}</span>`:""}</div><b>${esc(d.razao)}</b><div class="small muted">${esc(d.cnaePrincipal.descricao)} · ${esc(d.municipio)}/${esc(d.uf)}</div></div>
+      <button class="btn" style="width:100%;margin-top:12px;padding:13px" onclick="OB.passo=2;boasVindas()">É a minha empresa — continuar</button>`:""}
+    <button class="btn ghost" style="width:100%;margin-top:6px" onclick="OB.passo=2;boasVindas()">Pular esta etapa</button>`;
+  if(p===2){ const sug=sugestoesChips(d);
+    corpo=`<h2 style="font-size:21px;margin:0 0 4px">O que sua empresa vende ou faz?</h2><p class="small muted" style="margin:0 0 12px">Toque para marcar. Isso define as licitações que vamos te mostrar.</p>
+    <div style="display:flex;flex-wrap:wrap;gap:8px">${sug.map(w=>`<button class="ob-chip ${OB.chips.has(w)?"on":""}" onclick="OB.chips.has('${esc(w)}')?OB.chips.delete('${esc(w)}'):OB.chips.add('${esc(w)}');boasVindas()">${OB.chips.has(w)?"✓ ":""}${esc(w)}</button>`).join("")}</div>
+    <label>Outras palavras (separe por vírgula)</label><input id="obOutras" placeholder="ex.: portaria, jardinagem">
+    <div class="grid g2"><div><label>Estado onde quer participar</label><select id="obUf"><option value="">Brasil inteiro</option>${UFS.map(u=>`<option ${u===(OB.uf||d?.uf||"")?"selected":""}>${u}</option>`).join("")}</select></div>
+    <div><label>Cidade (opcional)</label><select id="obMun"><option value="">Todas</option></select></div></div>
+    <button class="btn" id="obFim" style="width:100%;margin-top:16px;padding:14px">🔎 Ver minhas oportunidades</button>`; }
+  $("#layer").innerHTML=`<div class="ob-bg"><div class="ob-card">${dots}${corpo}</div></div>`;
+  if(p===1){
+    const cn=$("#obCnpj"); cn.addEventListener("input",()=>{ const v=soDig(cn.value).slice(0,14); cn.value=v.length===14?fmtCNPJ(v):v; });
+    $("#obBuscar").onclick=async()=>{ const c=soDig(cn.value); if(!cnpjValido(c)){ $("#obMsg").innerHTML=`<div class="flag bad"><div>✕</div><div>CNPJ inválido.</div></div>`; return; }
+      const b=$("#obBuscar"); b.disabled=true; b.innerHTML='<span class="spin"></span> Consultando…';
+      try{ const dd=await consultarCNPJ(c); S.empresa.cnpj=c; S.empresa.dados=dd; salvar(); OB.dados=dd; OB.uf=dd.uf; boasVindas(); }
+      catch(e){ b.disabled=false; b.textContent="Buscar na Receita"; S.empresa.cnpj=c; salvar(); $("#obMsg").innerHTML=`<div class="flag warn"><div>⚠️</div><div>${e.message==="bloqueado"?"Não consegui consultar a Receita agora. Pode pular — depois você completa em Minha empresa.":esc(e.message)}</div></div>`; }
+    };
+  }
+  if(p===2){
+    const pop=async()=>{ const uf=$("#obUf").value, sel=$("#obMun"); if(!uf){ sel.innerHTML='<option value="">Todas</option>'; return; }
+      const base=await dadosBase(uf); const cont={}; (base||[]).forEach(l=>{ if(l.municipio) cont[l.municipio]=(cont[l.municipio]||0)+1; });
+      const pref=semAcento(OB.dados?.municipio||"");
+      sel.innerHTML='<option value="">Todas</option>'+Object.keys(cont).sort((a,b)=>a.localeCompare(b,"pt")).map(n=>`<option ${semAcento(n)===pref&&!OB.mun?"":""}>${esc(n)}</option>`).join(""); };
+    $("#obUf").onchange=pop; pop();
+    $("#obFim").onclick=()=>{
+      const outras=$("#obOutras").value.split(",").map(s=>s.trim()).filter(Boolean);
+      const pal=[...OB.chips,...outras].join(", ");
+      if(pal){ S.empresa.palavras=pal; S.radar.palavras=pal; }
+      S.radar.uf=$("#obUf").value; S.radar.mun=$("#obMun").value; S.radar.dias="30"; S.radar.modalidade=""; S.radar.ordem="ader"; S.radar.ultimos=[];
+      fimBoasVindas(false); ir("radar");
+    };
+  }
+}
+function fimBoasVindas(explorar){ S.intro=true; salvar(); fecharModal(); if(explorar) render(); }
+function abrirBoasVindas(){ OB.passo=0; OB.dados=S.empresa.dados; OB.chips=new Set(); boasVindas(); }
+
 /* ================= PÁGINA: CONFIGURAÇÕES ================= */
 function pgConfig(){
   const tam=(()=>{try{return (localStorage.getItem(STORE_KEY)||"").length;}catch(e){return 0;}})();
@@ -915,6 +1042,7 @@ function pgConfig(){
    <dt>Licitações</dt><dd>PNCP — API pública de consultas (pncp.gov.br/api/consulta)</dd>
    <dt>IA</dt><dd>${sampleFn?"Integrada (Claude)":"Modo prompt (copiar e colar no Claude)"}</dd>
    <dt>Base legal</dt><dd>Lei 14.133/2021 · LC 123/2006 · jurisprudência do TCU</dd></dl>
+   <h3>Apresentação</h3><button class="btn sec sm" onclick="abrirBoasVindas()">Rever tela de boas-vindas</button>
    <h3>Zona de perigo</h3><button class="btn danger sm" onclick="confirmar('Apagar TODOS os dados deste navegador? Faça backup antes.',()=>{S=vazio();salvar();render();toast('Dados apagados');})">Apagar todos os dados</button>
   </div></div>`;
 }
@@ -928,6 +1056,7 @@ function posConfig(){
 }
 
 render();
+if(!S.intro && !S.empresa.dados) abrirBoasVindas();
 </script>
 </body>
 </html>
