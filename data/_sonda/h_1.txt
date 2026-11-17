@@ -1,0 +1,12 @@
+HTTP/1.1 200 OK
+date: Tue, 17 Nov 2026 13:53:44 GMT
+access-control-allow-origin: *
+access-control-allow-methods: *
+access-control-allow-headers: *
+access-control-max-age: 1728000
+cache-control: max-age=120
+content-type: application/json
+strict-transport-security: max-age=15768000
+Set-Cookie: TS4f634c10027=082670627aab20007c236fa9f1f16ab7926dd71993cf483aeea74a5352a963b54473ee411166379808db14ddee113000b159979d47c5369c2c80dffc330e9fa6f9dde6baac1412da1f3aa4bd9238b3ddbb113454f540d0fa54b161fb058d1722; Path=/
+Transfer-Encoding: chunked
+

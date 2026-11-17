@@ -1,0 +1,4 @@
+1 rc=0 https://pncp.gov.br/api/search/?q=00000000000191&tipos_documento=contrato&ordenacao=-data&pagina=1&tam_pagina=5
+2 rc=0 https://pncp.gov.br/api/search?q=00000000000191&tipos_documento=contrato&pagina=1&tam_pagina=5
+3 rc=0 https://pncp.gov.br/api/search/?q=00000000000191&tipos_documento=contrato&ordenacao=-data&pagina=1&tam_pagina=5&status=vigente
+4 rc=0 https://pncp.gov.br/api/search/?q=limpeza&tipos_documento=edital&ordenacao=-data&pagina=1&tam_pagina=2&status=recebendo_proposta
