@@ -1,4 +1,0 @@
-1 rc=0 t=2s https://pncp.gov.br/api/search/?q=limpeza&tipos_documento=contrato&ordenacao=-data&pagina=1&tam_pagina=100&ufs=PA&status=vigente
-2 rc=0 t=3s https://pncp.gov.br/api/search/?q=limpeza&tipos_documento=contrato&ordenacao=-data&pagina=1&tam_pagina=500&uf=PA&status=vigente
-3 rc=0 t=3s https://pncp.gov.br/api/search/?q=&tipos_documento=edital&ordenacao=-data&pagina=1&tam_pagina=500&status=recebendo_proposta
-4 rc=0 t=1s https://pncp.gov.br/api/search/?q=limpeza&tipos_documento=contrato&ordenacao=-data&pagina=1&tam_pagina=50&ufs=PA&municipios=3870&status=vigente

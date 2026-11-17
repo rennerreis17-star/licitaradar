@@ -106,6 +106,7 @@ tr:last-child td{border-bottom:0}
 .pill-status{font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px}
 .stack>*+*{margin-top:16px}
 .hide{display:none!important}
+.card h2{flex-wrap:wrap}.card h2 .tabs button{padding:5px 11px;font-size:12.5px}
 .top .row>.tabs{flex:0 0 auto;min-width:0;flex-wrap:nowrap}.top .row>.tabs button{padding:7px 12px}.top .row>.btn{flex:0 0 auto;min-width:0}
 body.fonteG main{zoom:1.12}
 body.dark{--bg:#0d1522;--card:#142033;--ink:#e6edf7;--muted:#93a4bd;--line:#24344d;--chip:#1d2c43;color-scheme:dark}
@@ -135,7 +136,7 @@ body.dark .card[style*="linear-gradient"]{background:#142033!important}
 .cal-d{aspect-ratio:1;border-radius:10px;background:#f8fafc;border:1px solid var(--line);padding:4px;display:flex;flex-direction:column;justify-content:space-between;font-size:12.5px;font-weight:600;cursor:default}
 .cal-d.vazio{background:transparent;border:0}.cal-d.nutil{color:#a0aec0;background:#fbfcfe}.cal-d.hoje{border:2px solid var(--accent);color:var(--accent)}
 .cal-dots{display:flex;gap:2px;flex-wrap:wrap}.cal-dots i,i.lg{width:7px;height:7px;border-radius:50%;display:inline-block}
-.dot-imp{background:var(--warn)}.dot-ses{background:var(--blue)}.dot-rec{background:var(--bad)}.dot-con{background:#64748b}.dot-doc{background:#a855f7}
+.dot-imp{background:var(--warn)}.dot-ses{background:var(--blue)}.dot-rec{background:var(--bad)}.dot-con{background:#64748b}.dot-doc{background:#a855f7}.dot-ctr{background:#0e9f6e}
 .bar{height:8px;background:var(--chip);border-radius:9px;min-width:80px;overflow:hidden}.bar i{display:block;height:100%;background:var(--accent)}
 .platrow{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}.platrow>div{flex:1;min-width:150px}
 .progress i.indet{width:40%;animation:indet 1.2s ease-in-out infinite}
@@ -182,7 +183,7 @@ body.dark .card[style*="linear-gradient"]{background:#142033!important}
    Fontes: BrasilAPI / Minha Receita / CNPJ.ws (dados abertos da Receita Federal)
            PNCP — API de Consultas (pncp.gov.br/api/consulta)
    ========================================================= */
-const VERSAO = "1.3";
+const VERSAO = "1.4";
 const STORE_KEY = "licitaradar_v1";
 
 /* ---------------- Estado ---------------- */
@@ -663,6 +664,7 @@ function pgPainel(){
   const feitos=passos.filter(p=>p[0]).length;
   return header("Painel", emp?`${esc(emp.razao)} · CNPJ ${fmtCNPJ(S.empresa.cnpj)}`:"Visão geral das suas licitações", `<button class="btn" onclick="ir('radar')">Buscar licitações</button>`)+
   (feitos<4?`<div class="card" style="margin-bottom:16px"><h2>Primeiros passos <span class="chip">${feitos}/4</span></h2>${passos.map(([ok,t,p])=>`<div class="flag ${ok?"ok":"info"}" style="cursor:pointer" onclick="ir('${p}')"><div>${ok?"✅":"➡️"}</div><div>${t}</div></div>`).join("")}</div>`:"")+
+  (()=>{ const mc=S.empresa.contratos; if(!mc) return ""; const r=resumoContratos(mc.lista); return `<div class="flag ${r.vence.length?"warn":"ok"}" style="margin-bottom:16px;cursor:pointer" onclick="ir('empresa')"><div>📜</div><div><b>${r.vig.length} contrato(s) vigente(s)</b> · ${brl(r.valor)} · ${r.orgs} órgão(s)${r.vence.length?` — <b>${r.vence.length} vencem em até 90 dias</b>`:""}</div></div>`; })()+
   `<div id="pOpo"></div><div class="grid g4">
     <div class="card kpi"><div class="lbl">Em acompanhamento</div><div class="val">${ativos.length}</div><div class="sub">${L.length} no total</div></div>
     <div class="card kpi"><div class="lbl">Aptas</div><div class="val" style="color:var(--ok)">${L.filter(l=>l.status==="apta").length}</div><div class="sub">${L.filter(l=>l.status==="pendencias").length} com pendências</div></div>
@@ -779,6 +781,7 @@ function pgEmpresa(){
     <div id="eMsg"></div>
     ${d?blocoDadosEmpresa(d):`<p class="muted small" style="margin-top:12px">Digite o CNPJ e clique em carregar. Busca em BrasilAPI → Minha Receita → CNPJ.ws (todas usam os dados abertos oficiais da Receita).</p>`}
   </div>
+  ${meusContratosCardHTML()}
   <div class="card"><h2>Áreas de atuação</h2>
     <label>Palavras-chave do que sua empresa vende/executa (usadas no Radar e na compatibilidade)</label>
     <input id="ePal" placeholder="ex.: limpeza, conservação, jardinagem, portaria, manutenção predial" value="${esc(e.palavras)}">
@@ -827,7 +830,7 @@ function blocoDadosEmpresa(d){
   </dl></div>`;
 }
 function posEmpresa(){
-  ligarCentral();
+  ligarCentral(); carregarMeusContratos(false);
   const e=S.empresa;
   const cn=$("#eCnpj"); cn.addEventListener("input",()=>{ const v=soDig(cn.value).slice(0,14); cn.value=v.length===14?fmtCNPJ(v):v; });
   $("#eBuscar").onclick=async()=>{
@@ -1015,7 +1018,7 @@ function prazosLic(l){
     ev.push({data:somaUteis(r,3),titulo:"Prazo de contrarrazões (aprox.)",tipo:"con",info:"3 dias úteis após o fim do prazo do recorrente"}); }
   return ev.filter(e=>e.data).map(e=>({...e,lic:l}));
 }
-const TIPO_EV={imp:["⚖️","warn"],ses:["🔨","blue"],rec:["📨","bad"],con:["🛡️",""],doc:["📄","warn"]};
+const TIPO_EV={ctr:["📜","info"],imp:["⚖️","warn"],ses:["🔨","blue"],rec:["📨","bad"],con:["🛡️",""],doc:["📄","warn"]};
 
 /* ================= PÁGINA: MINHAS LICITAÇÕES ================= */
 let filtroStatus="ativos", visaoLic="quadro";
@@ -1130,6 +1133,7 @@ function verDocGerado(lid,i){ const g=S.licitacoes.find(x=>x.id===lid).docsGerad
 let agMes=null;
 function eventosTodos(){
   const ev=[]; S.licitacoes.filter(l=>!["perdida","descartada"].includes(l.status)).forEach(l=>ev.push(...prazosLic(l)));
+  (S.empresa.contratos?.lista||[]).forEach(c=>{ if(c.fim){ const f=parseD(c.fim.slice(0,10)); if(!isNaN(f)) ev.push({data:f,titulo:"Fim de vigência: "+(c.tit||"contrato")+" — "+c.g,tipo:"ctr",info:limpaObj(c.o).slice(0,90)+" · negocie a prorrogação com antecedência"}); } });
   S.empresa.docs.filter(d=>d.validade).forEach(d=>ev.push({data:parseD(d.validade),titulo:"Vence: "+d.nome,tipo:"doc",info:"Renove antes das próximas sessões"}));
   return ev.sort((a,b)=>a.data-b.data);
 }
@@ -1146,7 +1150,7 @@ function pgAgenda(){
   return header("Agenda de prazos","Impugnação, sessão, recurso e certidões — calculados em dias úteis.",`<button class="btn sec" onclick="exportarICS()">📲 Pôr tudo no calendário do celular</button>`)+
   `<div class="grid g2" style="align-items:start"><div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><button class="btn ghost" onclick="agMes=new Date(agMes.getFullYear(),agMes.getMonth()-1,1);render()">‹</button><b style="text-transform:capitalize">${mesNome}</b><button class="btn ghost" onclick="agMes=new Date(agMes.getFullYear(),agMes.getMonth()+1,1);render()">›</button></div>
    <div class="cal">${["D","S","T","Q","Q","S","S"].map(x=>`<div class="cal-h">${x}</div>`).join("")}${cel}</div>
-   <div class="small muted" style="margin-top:10px;display:flex;gap:12px;flex-wrap:wrap"><span><i class="dot-imp lg"></i> impugnação</span><span><i class="dot-ses lg"></i> sessão</span><span><i class="dot-rec lg"></i> recurso</span><span><i class="dot-doc lg"></i> certidão</span></div></div>
+   <div class="small muted" style="margin-top:10px;display:flex;gap:12px;flex-wrap:wrap"><span><i class="dot-imp lg"></i> impugnação</span><span><i class="dot-ses lg"></i> sessão</span><span><i class="dot-rec lg"></i> recurso</span><span><i class="dot-doc lg"></i> certidão</span><span><i class="dot-ctr lg"></i> fim de contrato</span></div></div>
   <div class="card"><h2>Próximos prazos</h2>${prox.length?prox.map(e=>{const dd=diasAte(e.data);const [ic,c]=TIPO_EV[e.tipo];return `<div class="flag ${c==="bad"?"bad":c==="warn"?"warn":"info"}" id="ev-${ymdL(e.data)}" ${e.lic?`style="cursor:pointer" onclick="abrirDetalhe('${e.lic.id}')"`:""}><div>${ic}</div><div><b>${fmtData(e.data)}</b> <span class="small muted">${dd===0?"hoje":dd===1?"amanhã":"em "+dd+" dias"}</span><div>${esc(e.titulo)}</div>${e.lic?`<div class="small muted">${esc(limpaObj(e.lic.objeto).slice(0,80))}</div>`:""}</div></div>`}).join(""):'<div class="empty">Sem prazos futuros. Salve licitações e informe a data da sessão.</div>'}</div></div>`;
 }
 function exportarICS(lics){
@@ -1279,56 +1283,133 @@ async function rodarIA(){
   AN.busy=false; render();
 }
 
-/* ================= PÁGINA: MERCADO (contratos PNCP) ================= */
-let META_C=null; const cacheC={};
-async function metaContratos(){ if(META_C!==null) return META_C; try{ const r=await fetch("data/contratos/meta.json",{cache:"no-store"}); if(!r.ok) throw 0; META_C=await r.json(); }catch(e){ META_C=false; } return META_C; }
-async function contratosUF(uf){ if(cacheC[uf]) return cacheC[uf]; try{ const r=await fetch(`data/contratos/${uf}.json`,{cache:"no-cache"}); if(!r.ok) return cacheC[uf]=[]; return cacheC[uf]=await r.json(); }catch(e){ return []; } }
-const MK={uf:"",pal:"",dias:"90",aba:"ranking"};
+/* ================= CONTRATOS AO VIVO (busca do PNCP) ================= */
+const PNCP_BUSCA="https://pncp.gov.br/api/search/";
+async function pncpBusca(params){
+  const qs=new URLSearchParams({ordenacao:"-data",pagina:"1",tam_pagina:"500",...params});
+  return await fetchJSON(PNCP_BUSCA+"?"+qs.toString(),45000);
+}
+function normContrato(x){
+  return {p:x.numero_controle_pncp||x.id, f:soDig(x.fornecedor_ni||""), fn:x.fornecedor_nome||"", o:x.description||"", v:+x.valor_global||0,
+    g:x.orgao_nome||"", u:x.uf||"", m:x.municipio_nome||"", d:x.data_assinatura||"", ini:x.data_inicio_vigencia||"", fim:x.data_fim_vigencia||"",
+    tipo:x.tipo_contrato_nome||"", mod:x.modalidade_licitacao_nome||"", tit:x.title||"", link:x.item_url?"https://pncp.gov.br/app"+x.item_url:""};
+}
+const linkPNCPContratos=(q,vig)=>`https://pncp.gov.br/app/contratos?q=${encodeURIComponent(q)}${vig?"&status=vigente":""}`;
+const cacheCNPJ={};
+async function contratosDoCNPJ(cnpj,vigentes,prog){
+  cnpj=soDig(cnpj); const k=cnpj+(vigentes?"v":"t"); if(cacheCNPJ[k]) return cacheCNPJ[k];
+  const raiz=cnpj.slice(0,8); let out=[], total=0;
+  for(let p=1;p<=4;p++){
+    prog&&prog(p);
+    const j=await pncpBusca({q:cnpj,tipos_documento:"contrato",pagina:String(p),...(vigentes?{status:"vigente"}:{})});
+    const its=j.items||[]; total=j.total||0;
+    out=out.concat(its.map(normContrato).filter(c=>c.f.slice(0,8)===raiz));
+    if(its.length<500||p*500>=total) break;
+  }
+  const r={lista:out,total,trunc:total>2000}; cacheCNPJ[k]=r; return r;
+}
+function resumoContratos(lista){
+  const hoje=new Date(); hoje.setHours(0,0,0,0);
+  const vig=lista.filter(c=>!c.fim||parseD(c.fim.slice(0,10))>=hoje);
+  const vence=vig.filter(c=>{const d=diasAte(c.fim&&c.fim.slice(0,10));return d!==null&&d<=90;});
+  return {vig,vence,valor:vig.reduce((s,c)=>s+c.v,0),orgs:new Set(vig.map(c=>c.g)).size,ufs:new Set(vig.map(c=>c.u)).size};
+}
+function contratosHTML(res,cnpj,vigentes,opts={}){
+  const L=res.lista; const r=resumoContratos(L); const id=opts.id||"ct";
+  if(!L.length) return `<div class="empty">Nenhum contrato ${vigentes?"vigente ":""}deste CNPJ encontrado no PNCP.<br><span class="small">O PNCP só tem contratos publicados por órgãos que já usam o portal (obrigatório desde a Lei 14.133). Contratos antigos ou de órgãos que ainda não publicam podem não aparecer.</span><div style="margin-top:10px"><a class="btn sec sm" href="${linkPNCPContratos(cnpj,vigentes)}" target="_blank" rel="noopener">Conferir no site do PNCP ↗</a></div></div>`;
+  const ord=[...L].sort((a,b)=>(a.fim||"9999").localeCompare(b.fim||"9999"));
+  return `<div class="grid g4" style="margin-bottom:12px">${[["Contratos "+(vigentes?"vigentes":"encontrados"),vigentes?r.vig.length:L.length],["Valor "+(vigentes?"vigente":"total"),brl(vigentes?r.valor:L.reduce((s,c)=>s+c.v,0))],["Órgãos contratantes",new Set(L.map(c=>c.g)).size],["Vencem em 90 dias",r.vence.length]].map(([a,b],i)=>`<div class="card kpi" style="box-shadow:none"><div class="lbl">${a}</div><div class="val" style="font-size:${i===1?17:22}px;${i===3&&r.vence.length?"color:var(--warn)":""}">${b}</div></div>`).join("")}</div>
+  ${res.trunc?`<div class="flag info"><div>ℹ️</div><div class="small">Mostrando os 2.000 mais recentes de ${res.total.toLocaleString("pt-BR")}.</div></div>`:""}
+  <div class="list">${ord.slice(0,opts.max||150).map(c=>{ const d=diasAte(c.fim&&c.fim.slice(0,10)); const fil=c.f!==soDig(cnpj);
+    return `<div class="it"><div style="min-width:0"><div class="t small">${esc(limpaObj(c.o).slice(0,170))}</div><div class="small muted">${esc(c.g)} · ${esc(c.m)}/${esc(c.u)} · ${esc(c.tit)}${fil?` · <span class="chip">filial ${fmtCNPJ(c.f).slice(-7)}</span>`:""}</div>
+    <div style="margin-top:4px;display:flex;gap:6px;flex-wrap:wrap">${c.fim?`<span class="chip ${d!==null&&d<0?"":d!==null&&d<=30?"bad":d!==null&&d<=90?"warn":"ok"}">${d!==null&&d<0?"encerrado em "+fmtData(c.fim.slice(0,10)):"vigente até "+fmtData(c.fim.slice(0,10))+(d!==null&&d<=90?" · "+d+" dias":"")}</span>`:""}${c.link?`<a class="small" href="${esc(c.link)}" target="_blank" rel="noopener">ver no PNCP ↗</a>`:""}</div></div><b style="white-space:nowrap">${brl(c.v)}</b></div>`; }).join("")}</div>
+  ${L.length>(opts.max||150)?`<div class="small muted" style="margin-top:8px">Mostrando ${opts.max||150} de ${L.length}. <a href="${linkPNCPContratos(cnpj,vigentes)}" target="_blank" rel="noopener">Ver todos no PNCP ↗</a></div>`:""}`;
+}
+function erroPNCPHTML(e,q,vig){ return `<div class="flag warn"><div>⚠️</div><div>Não consegui consultar o PNCP agora (${esc(e.message||"sem conexão")}). Tente de novo em instantes ou <a href="${linkPNCPContratos(q,vig)}" target="_blank" rel="noopener">consulte no site do PNCP ↗</a>.</div></div>`; }
+
+/* ---- Meus contratos (empresa) ---- */
+let MEUS_VIG=true;
+function meusContratosCardHTML(){
+  const e=S.empresa; if(!e.cnpj) return "";
+  const mc=e.contratos; const r=mc?resumoContratos(mc.lista):null;
+  return `<div class="card" id="meusCt"><h2>📜 Meus contratos no PNCP <span class="tabs" style="margin:0"><button class="${MEUS_VIG?"on":""}" onclick="MEUS_VIG=true;carregarMeusContratos(true)">Vigentes</button><button class="${!MEUS_VIG?"on":""}" onclick="MEUS_VIG=false;carregarMeusContratos(true)">Todos</button></span></h2>
+   <p class="small muted" style="margin-top:-6px">Contratos públicos em que o CNPJ ${fmtCNPJ(e.cnpj)} (e filiais) é o fornecedor. Os fins de vigência entram na sua Agenda — hora de negociar prorrogação ou se preparar para a nova licitação.${mc?` Atualizado ${fmtDataHora(mc.em)}.`:""}</p>
+   <div id="meusCtBox">${mc&&mc.vig===MEUS_VIG?contratosHTML(mc,e.cnpj,MEUS_VIG,{id:"meus"}):'<div class="empty">Carregando contratos do PNCP…</div>'}</div>
+   <div class="right" style="justify-content:flex-start"><button class="btn sec sm" onclick="carregarMeusContratos(true)">↻ Atualizar</button><a class="btn ghost sm" href="${linkPNCPContratos(e.cnpj,MEUS_VIG)}" target="_blank" rel="noopener">Abrir no PNCP ↗</a></div></div>`;
+}
+async function carregarMeusContratos(forcar){
+  const e=S.empresa; if(!e.cnpj) return; const box=()=>$("#meusCtBox");
+  if(!forcar && e.contratos && e.contratos.vig===MEUS_VIG && (Date.now()-new Date(e.contratos.em))<6*3600e3) return;
+  if(forcar){ delete cacheCNPJ[soDig(e.cnpj)+(MEUS_VIG?"v":"t")]; }
+  if(box()) box().innerHTML='<div class="empty"><span class="spin" style="border-color:rgba(0,0,0,.15);border-top-color:var(--accent)"></span> Consultando o PNCP…</div>';
+  try{ const r=await contratosDoCNPJ(e.cnpj,MEUS_VIG); e.contratos={...r,lista:r.lista.slice(0,400),vig:MEUS_VIG,em:new Date().toISOString()}; salvar();
+    if(pagina==="empresa"){ const c=$("#meusCt"); if(c) c.outerHTML=meusContratosCardHTML(); } }
+  catch(err){ if(box()) box().innerHTML=erroPNCPHTML(err,e.cnpj,MEUS_VIG); }
+}
+
+/* ---- Histórico do concorrente ---- */
+async function historicoConc(cnpj,vig=true){
+  const c=S.concorrentes.find(x=>x.cnpj===cnpj); const nome=c?.dados?.razao||fmtCNPJ(cnpj);
+  modal(`<h2>📜 Contratos de ${esc(nome)}</h2><div class="tabs"><button class="${vig?"on":""}" onclick="historicoConc('${cnpj}',true)">Vigentes</button><button class="${!vig?"on":""}" onclick="historicoConc('${cnpj}',false)">Todos</button></div><div id="hcBox"><div class="empty">Consultando o PNCP…</div></div><div class="right"><a class="btn ghost" href="${linkPNCPContratos(cnpj,vig)}" target="_blank" rel="noopener">Abrir no PNCP ↗</a><button class="btn" onclick="fecharModal()">Fechar</button></div>`);
+  try{ const r=await contratosDoCNPJ(cnpj,vig); if($("#hcBox")) $("#hcBox").innerHTML=contratosHTML(r,cnpj,vig,{max:100}); }
+  catch(e){ if($("#hcBox")) $("#hcBox").innerHTML=erroPNCPHTML(e,cnpj,vig); }
+}
+
+/* ================= PÁGINA: MERCADO (ao vivo) ================= */
+const MK={uf:"",mun:"",pal:"",vig:true,aba:"ranking",cnpj:""};
+let MK_DADOS=null, MK_KEY="";
 function pgMercado(){
-  if(!MK.uf) MK.uf=S.radar.uf||S.empresa.dados?.uf||""; if(!MK.pal) MK.pal=S.empresa.palavras||S.radar.palavras||"";
-  return header("Mercado","Quem está ganhando contratos na sua área e por quanto — dados públicos de contratos do PNCP.")+
-  `<div class="card"><div class="grid g4"><div style="grid-column:span 2"><label>Área (palavras-chave)</label><input id="mkPal" value="${esc(MK.pal)}" placeholder="ex.: limpeza, conservação"></div>
+  if(!MK.uf) MK.uf=S.radar.uf||S.empresa.dados?.uf||"PA"; if(!MK.pal) MK.pal=(S.empresa.palavras||S.radar.palavras||"").split(",")[0].trim();
+  return header("Mercado","Quem está ganhando contratos na sua área, por quanto, e os contratos de qualquer CNPJ — direto do PNCP, ao vivo.")+
+  `<div class="card"><h2>🔎 Contratos de um CNPJ</h2><div class="row"><div><input id="mkCnpj" inputmode="numeric" placeholder="CNPJ de qualquer empresa (sua ou concorrente)" value="${esc(MK.cnpj?fmtCNPJ(MK.cnpj):"")}"></div><div class="fit"><button class="btn" id="mkCnpjBtn">Ver contratos</button></div></div></div>
+  <div class="card" style="margin-top:16px"><h2>📊 Sua área de atuação</h2><div class="grid g4"><div style="grid-column:span 2"><label>Área (palavra-chave principal)</label><input id="mkPal" value="${esc(MK.pal)}" placeholder="ex.: limpeza"></div>
    <div><label>Estado</label><select id="mkUf">${UFS.map(u=>`<option ${u===MK.uf?"selected":""}>${u}</option>`).join("")}</select></div>
-   <div><label>Período</label><select id="mkDias">${[["30","30 dias"],["90","90 dias"],["180","180 dias"]].map(([k,n])=>`<option value="${k}" ${k===MK.dias?"selected":""}>${n}</option>`).join("")}</select></div></div>
+   <div><label>Cidade</label><select id="mkMun"><option value="">Todas</option></select></div>
+   <div><label>Contratos</label><select id="mkVig"><option value="1" ${MK.vig?"selected":""}>Só vigentes</option><option value="0" ${!MK.vig?"selected":""}>Todos (inclui encerrados)</option></select></div></div>
    <div id="mkInfo" class="small muted" style="margin-top:10px"></div></div>
-  <div class="tabs" style="margin-top:16px"><button class="${MK.aba==="ranking"?"on":""}" onclick="MK.aba='ranking';render()">🏆 Quem ganha</button><button class="${MK.aba==="precos"?"on":""}" onclick="MK.aba='precos';render()">💲 Banco de preços</button></div>
+  <div class="tabs" style="margin-top:16px"><button class="${MK.aba==="ranking"?"on":""}" onclick="MK.aba='ranking';desenhaMercado()">🏆 Quem ganha</button><button class="${MK.aba==="precos"?"on":""}" onclick="MK.aba='precos';desenhaMercado()">💲 Banco de preços</button><button class="${MK.aba==="vencendo"?"on":""}" onclick="MK.aba='vencendo';desenhaMercado()">⏳ Vencendo (oportunidades)</button></div>
   <div id="mkRes"><div class="empty">Carregando…</div></div>`;
 }
-function filtraContratos(lista){
-  const termos=MK.pal.split(",").map(s=>semAcento(s).trim()).filter(Boolean); const pos=termos.filter(k=>!k.startsWith("-")), neg=termos.filter(k=>k.startsWith("-")).map(k=>k.slice(1));
-  const lim=new Date(Date.now()-(+MK.dias)*864e5).toISOString().slice(0,10);
-  return lista.filter(c=>{ if((c.d||"")<lim) return false; const o=semAcento(c.o); if(neg.some(k=>o.includes(k))) return false; return !pos.length||pos.some(k=>o.includes(k)); });
+function desenhaMercado(){
+  document.querySelectorAll(".tabs button").forEach(b=>{ const t=b.getAttribute("onclick")||""; if(t.includes("MK.aba")) b.classList.toggle("on",t.includes(`'${MK.aba}'`)); });
+  const box=$("#mkRes"); if(!box||!MK_DADOS) return;
+  const fil=MK.mun?MK_DADOS.filter(c=>semAcento(c.m)===semAcento(MK.mun)):MK_DADOS; const meu=soDig(S.empresa.cnpj||"");
+  if(!fil.length){ box.innerHTML=`<div class="empty">Nenhum contrato com “${esc(MK.pal)}” ${MK.mun?"em "+esc(MK.mun):"em "+esc(MK.uf)}.<br><span class="small">Tente outra palavra (ex.: no singular) ou o estado todo.</span></div>`; return; }
+  if(MK.aba==="ranking"){
+    const g={}; fil.forEach(c=>{ const k=c.f||c.fn; const x=g[k]=g[k]||{f:c.f,fn:c.fn,n:0,v:0,orgs:new Set(),cid:new Set()}; x.n++; x.v+=c.v; x.orgs.add(c.g); x.cid.add(c.m); });
+    const rk=Object.values(g).sort((a,b)=>b.v-a.v).slice(0,60); const tot=rk.reduce((s,x)=>s+x.v,0)||1;
+    box.innerHTML=`<div class="card"><h2>🏆 Quem mais ganha ${MK.mun?"em "+esc(MK.mun):"em "+esc(MK.uf)}</h2><div class="list">${rk.map((x,i)=>`<div class="it" ${x.f&&x.f.slice(0,8)===meu.slice(0,8)?'style="background:#f0fdf4"':""}><div style="min-width:0;flex:1"><div class="t">${i+1}. ${esc(x.fn||"(sem nome)")}${x.f&&x.f.slice(0,8)===meu.slice(0,8)?' <span class="chip ok">você</span>':""}</div><div class="small muted">${x.f?fmtCNPJ(x.f)+" · ":""}${x.n} contrato(s) · ${x.orgs.size} órgão(s) · ${[...x.cid].slice(0,3).map(esc).join(", ")}</div><div class="bar" style="margin-top:6px"><i style="width:${Math.max(2,x.v/tot*100)}%"></i></div></div><div style="text-align:right;flex-shrink:0"><b>${brl(x.v)}</b>${x.f?`<div style="margin-top:4px;display:flex;gap:4px;justify-content:flex-end"><button class="btn ghost sm" onclick="historicoConc('${x.f}')">📜</button>${x.f.slice(0,8)!==meu.slice(0,8)&&!S.concorrentes.some(c=>c.cnpj===x.f)?`<button class="btn sec sm" onclick="addConcMercado('${x.f}')">+ Rival</button>`:""}</div>`:""}</div></div>`).join("")}</div></div>`;
+  } else if(MK.aba==="precos"){
+    const vs=fil.map(c=>c.v).filter(v=>v>0).sort((a,b)=>a-b); const med=vs.length?vs[Math.floor(vs.length/2)]:0, mean=vs.reduce((s,v)=>s+v,0)/(vs.length||1);
+    box.innerHTML=`<div class="grid g4" style="margin-bottom:14px">${[["Contratos",fil.length],["Mediana",brl(med)],["Média",brl(mean)],["Menor / maior",vs.length?brl(vs[0])+" / "+brl(vs[vs.length-1]):"—"]].map(([a,b])=>`<div class="card kpi"><div class="lbl">${a}</div><div class="val" style="font-size:17px">${b}</div></div>`).join("")}</div>
+    <div class="card"><h2>💲 Contratos parecidos</h2><div class="small muted" style="margin-top:-6px;margin-bottom:8px">Valor global do contrato (período inteiro). Compare objeto, quantidade e vigência antes de usar como referência.</div><div class="list">${[...fil].sort((a,b)=>(b.d||"").localeCompare(a.d||"")).slice(0,120).map(c=>`<div class="it"><div style="min-width:0"><div class="t small">${esc(limpaObj(c.o).slice(0,180))}</div><div class="small muted">${esc(c.g)} · ${esc(c.m)} · ${fmtData(c.d)} · ${esc(c.fn)}${c.link?` · <a href="${esc(c.link)}" target="_blank" rel="noopener">PNCP ↗</a>`:""}</div></div><div style="font-weight:800;white-space:nowrap">${brl(c.v)}</div></div>`).join("")}</div></div>`;
+  } else {
+    const ven=fil.filter(c=>{const d=diasAte(c.fim&&c.fim.slice(0,10));return d!==null&&d>=0&&d<=180;}).sort((a,b)=>a.fim.localeCompare(b.fim));
+    box.innerHTML=`<div class="card"><h2>⏳ Contratos que vencem em até 6 meses</h2><div class="small muted" style="margin-top:-6px;margin-bottom:8px">Quando um contrato acaba sem prorrogação, o órgão precisa licitar de novo. Procure o órgão, acompanhe o PNCP e prepare documentos com antecedência.</div>${ven.length?`<div class="list">${ven.slice(0,120).map(c=>{const d=diasAte(c.fim.slice(0,10));return `<div class="it"><div style="min-width:0"><div class="t small">${esc(limpaObj(c.o).slice(0,170))}</div><div class="small muted">${esc(c.g)} · ${esc(c.m)} · atual: ${esc(c.fn)}${c.link?` · <a href="${esc(c.link)}" target="_blank" rel="noopener">PNCP ↗</a>`:""}</div><span class="chip ${d<=30?"bad":"warn"}" style="margin-top:4px">vence ${fmtData(c.fim.slice(0,10))} · ${d} dias</span></div><b style="white-space:nowrap">${brl(c.v)}</b></div>`;}).join("")}</div>`:'<div class="empty">Nenhum contrato vencendo nos próximos 6 meses com esse filtro.</div>'}</div>`;
+  }
 }
 async function posMercado(){
-  const go=async()=>{ MK.pal=$("#mkPal").value; MK.uf=$("#mkUf").value; MK.dias=$("#mkDias").value;
-    const meta=await metaContratos(); const box=$("#mkRes"); if(!box) return;
-    if(!meta||!meta.total){ $("#mkInfo").textContent=""; box.innerHTML=`<div class="empty">📦 A base de contratos ainda está sendo montada pelo robô.<br><span class="small">Ela cresce a cada coleta (3× ao dia). Volte mais tarde.</span></div>`; return; }
-    const todos=await contratosUF(MK.uf); const fil=filtraContratos(todos);
-    $("#mkInfo").innerHTML=`Base de contratos: ${meta.total.toLocaleString("pt-BR")} no Brasil · dias cobertos: ${meta.dias_cobertos||"?"} · atualizada em ${fmtDataHora(meta.atualizado)} · ${todos.length.toLocaleString("pt-BR")} em ${esc(MK.uf)} · <b>${fil.length}</b> na sua área`;
-    if(!fil.length){ box.innerHTML=`<div class="empty">Nenhum contrato encontrado com essas palavras em ${esc(MK.uf)} no período.</div>`; return; }
-    const meu=S.empresa.cnpj;
-    if(MK.aba==="ranking"){
-      const g={}; fil.forEach(c=>{ const k=c.f; const x=g[k]=g[k]||{f:c.f,fn:c.fn,n:0,v:0,orgs:new Set(),cid:new Set()}; x.n++; x.v+=+c.v||0; x.orgs.add(c.g); x.cid.add(c.m); });
-      const rk=Object.values(g).sort((a,b)=>b.v-a.v).slice(0,50); const tot=rk.reduce((s,x)=>s+x.v,0)||1;
-      box.innerHTML=`<div class="card"><h2>🏆 Empresas que mais ganham em ${esc(MK.uf)}</h2><div class="tbl"><table><thead><tr><th>#</th><th>Empresa</th><th>Contratos</th><th>Valor total</th><th>Participação</th><th></th></tr></thead><tbody>${rk.map((x,i)=>`<tr ${x.f===meu?'style="background:#f0fdf4"':""}><td>${i+1}</td><td><b>${esc(x.fn)}</b>${x.f===meu?' <span class="chip ok">você</span>':""}<div class="small muted">${fmtCNPJ(x.f)} · ${x.orgs.size} órgão(s) · ${[...x.cid].slice(0,3).map(esc).join(", ")}</div></td><td>${x.n}</td><td style="white-space:nowrap">${brl(x.v)}</td><td><div class="bar"><i style="width:${Math.max(2,x.v/tot*100)}%"></i></div></td><td>${x.f!==meu&&!S.concorrentes.some(c=>c.cnpj===x.f)?`<button class="btn sec sm" onclick="addConcMercado('${x.f}')">+ Concorrente</button>`:""}</td></tr>`).join("")}</tbody></table></div></div>`;
-    } else {
-      const vs=fil.map(c=>+c.v||0).filter(v=>v>0).sort((a,b)=>a-b); const med=vs.length?vs[Math.floor(vs.length/2)]:0, mean=vs.reduce((s,v)=>s+v,0)/(vs.length||1);
-      box.innerHTML=`<div class="grid g4" style="margin-bottom:14px">${[["Contratos",fil.length],["Mediana",brl(med)],["Média",brl(mean)],["Menor / maior",vs.length?brl(vs[0])+" / "+brl(vs[vs.length-1]):"—"]].map(([a,b])=>`<div class="card kpi"><div class="lbl">${a}</div><div class="val" style="font-size:18px">${b}</div></div>`).join("")}</div>
-      <div class="card"><h2>💲 Contratos parecidos (mais recentes)</h2><div class="small muted" style="margin-top:-6px;margin-bottom:8px">Use como referência de preço. O valor é do contrato inteiro — compare objeto, quantidade e prazo antes de concluir.</div><div class="list">${fil.sort((a,b)=>(b.d||"").localeCompare(a.d||"")).slice(0,80).map(c=>`<div class="it"><div style="min-width:0"><div class="t small">${esc(limpaObj(c.o).slice(0,180))}</div><div class="small muted">${esc(c.g)} · ${esc(c.m)} · ${fmtData(c.d)} · ${esc(c.fn)}</div></div><div style="font-weight:800;white-space:nowrap">${brl(c.v)}</div></div>`).join("")}</div></div>`;
-    }
+  const cn=$("#mkCnpj"); cn.addEventListener("input",()=>{ const v=soDig(cn.value).slice(0,14); cn.value=v.length===14?fmtCNPJ(v):v; });
+  const verCnpj=()=>{ const c=soDig(cn.value); if(!cnpjValido(c)){ toast("CNPJ inválido"); return; } MK.cnpj=c; historicoConc(c,true); };
+  $("#mkCnpjBtn").onclick=verCnpj; cn.onkeydown=e=>{ if(e.key==="Enter") verCnpj(); };
+  const popMun=()=>{ const s=$("#mkMun"); if(!s||!MK_DADOS) return; const cont={}; MK_DADOS.forEach(c=>{ if(c.m) cont[c.m]=(cont[c.m]||0)+1; });
+    s.innerHTML='<option value="">Todas</option>'+Object.keys(cont).sort((a,b)=>a.localeCompare(b,"pt")).map(n=>`<option value="${esc(n)}" ${semAcento(n)===semAcento(MK.mun)?"selected":""}>${esc(n)} (${cont[n]})</option>`).join(""); };
+  const go=async()=>{
+    MK.pal=$("#mkPal").value.trim(); MK.uf=$("#mkUf").value; MK.vig=$("#mkVig").value==="1";
+    const key=[MK.pal,MK.uf,MK.vig].join("|"); if(key===MK_KEY&&MK_DADOS){ popMun(); desenhaMercado(); return; }
+    $("#mkRes").innerHTML='<div class="empty"><span class="spin" style="border-color:rgba(0,0,0,.15);border-top-color:var(--accent)"></span> Consultando contratos no PNCP…</div>';
+    try{ let all=[], total=0;
+      for(let p=1;p<=2;p++){ const j=await pncpBusca({q:MK.pal,tipos_documento:"contrato",ufs:MK.uf,pagina:String(p),...(MK.vig?{status:"vigente"}:{})}); const its=j.items||[]; total=j.total||0; all=all.concat(its.map(normContrato)); if(its.length<500) break; }
+      MK_DADOS=all; MK_KEY=key;
+      $("#mkInfo").innerHTML=`${total.toLocaleString("pt-BR")} contratos ${MK.vig?"vigentes ":""}com “${esc(MK.pal||"tudo")}” em ${esc(MK.uf)}${total>all.length?` · analisando os ${all.length} mais recentes`:""} · fonte: PNCP, ao vivo`;
+      popMun(); desenhaMercado();
+    }catch(e){ $("#mkRes").innerHTML=erroPNCPHTML(e,MK.pal,MK.vig); }
   };
-  ["#mkUf","#mkDias"].forEach(s=>$(s).onchange=go); let t; $("#mkPal").oninput=()=>{ clearTimeout(t); t=setTimeout(go,400); };
+  $("#mkUf").onchange=()=>{ MK.mun=""; go(); }; $("#mkVig").onchange=go; $("#mkMun").onchange=()=>{ MK.mun=$("#mkMun").value; desenhaMercado(); };
+  let t; $("#mkPal").oninput=()=>{ clearTimeout(t); t=setTimeout(go,600); };
   go();
 }
-async function addConcMercado(cnpj){ if(S.concorrentes.some(c=>c.cnpj===cnpj)) return; let dados=null; toast("Consultando CNPJ…"); try{ dados=await consultarCNPJ(cnpj); }catch(e){} S.concorrentes.unshift({id:uid(),cnpj,dados,licId:"",notas:"",criadoEm:new Date().toISOString()}); salvar(); toast("Adicionado em Concorrentes ✔"); render(); }
-async function historicoConc(cnpj){
-  modal(`<h2>📜 Contratos na base do PNCP</h2><div id="hcBox" class="small muted">Procurando em todos os estados…</div><div class="right"><button class="btn" onclick="fecharModal()">Fechar</button></div>`);
-  const meta=await metaContratos(); const box=$("#hcBox"); if(!meta||!meta.total){ box.innerHTML="A base de contratos ainda está sendo montada pelo robô. Tente mais tarde."; return; }
-  let ach=[]; const ufs=Object.keys(meta.por_uf||{}); for(let i=0;i<ufs.length;i++){ if(!$("#hcBox")) return; box.textContent=`Procurando… ${ufs[i]} (${i+1}/${ufs.length})`; const l=await contratosUF(ufs[i]); ach=ach.concat(l.filter(c=>c.f===cnpj)); }
-  if(!$("#hcBox")) return;
-  ach.sort((a,b)=>(b.d||"").localeCompare(a.d||""));
-  box.innerHTML=ach.length?`<div class="flag info"><div>📊</div><div><b>${ach.length}</b> contrato(s) · total <b>${brl(ach.reduce((s,c)=>s+(+c.v||0),0))}</b> · ${new Set(ach.map(c=>c.u)).size} estado(s)</div></div><div class="list">${ach.slice(0,100).map(c=>`<div class="it"><div style="min-width:0"><div class="t small">${esc(limpaObj(c.o).slice(0,160))}</div><div class="small muted">${esc(c.g)} · ${esc(c.m)}/${esc(c.u)} · ${fmtData(c.d)}</div></div><b style="white-space:nowrap">${brl(c.v)}</b></div>`).join("")}</div>`:`Nenhum contrato deste CNPJ nos ${meta.dias_cobertos||"últimos"} dias cobertos pela base.`;
-}
+async function addConcMercado(cnpj){ if(S.concorrentes.some(c=>c.cnpj===cnpj)) return; let dados=null; toast("Consultando CNPJ…"); try{ dados=await consultarCNPJ(cnpj); }catch(e){} S.concorrentes.unshift({id:uid(),cnpj,dados,licId:"",notas:"",criadoEm:new Date().toISOString()}); salvar(); toast("Adicionado em Rivais ✔"); desenhaMercado(); }
 
 /* ================= PÁGINA: CONCORRENTES ================= */
 function pgConcorrentes(){

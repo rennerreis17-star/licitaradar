@@ -34,15 +34,9 @@ jobs:
         continue-on-error: true
         env:
           DIAS: "60"
-          MINUTOS: "38"
+          MINUTOS: "50"
+          MINUTOS_BUSCA: "12"
         run: python scripts/coletar_pncp.py
-
-      - name: Coletar contratos assinados (página Mercado)
-        if: github.event_name != 'push'
-        continue-on-error: true
-        env:
-          MINUTOS_CONTRATOS: "18"
-        run: python scripts/coletar_contratos.py
 
       - name: Salvar a base no repositório
         if: github.event_name != 'push'
