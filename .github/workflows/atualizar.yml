@@ -14,8 +14,9 @@ permissions:
   id-token: write
 
 concurrency:
-  group: licitaradar
-  cancel-in-progress: false
+  # mudanças no código publicam na hora; a coleta do PNCP roda em fila separada
+  group: licitaradar-${{ github.event_name == 'push' && 'site' || 'coleta' }}
+  cancel-in-progress: ${{ github.event_name == 'push' }}
 
 jobs:
   build:
@@ -29,6 +30,7 @@ jobs:
           python-version: "3.12"
 
       - name: Coletar licitações abertas no PNCP
+        if: github.event_name != 'push'
         continue-on-error: true
         env:
           DIAS: "60"
@@ -36,6 +38,7 @@ jobs:
         run: python scripts/coletar_pncp.py
 
       - name: Salvar a base no repositório
+        if: github.event_name != 'push'
         run: |
           git config user.name "licitaradar-bot"
           git config user.email "actions@users.noreply.github.com"
