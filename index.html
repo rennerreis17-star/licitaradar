@@ -106,6 +106,19 @@ tr:last-child td{border-bottom:0}
 .pill-status{font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px}
 .stack>*+*{margin-top:16px}
 .hide{display:none!important}
+.top .row>.tabs{flex:0 0 auto;min-width:0;flex-wrap:nowrap}.top .row>.tabs button{padding:7px 12px}.top .row>.btn{flex:0 0 auto;min-width:0}
+body.fonteG main{zoom:1.12}
+body.dark{--bg:#0d1522;--card:#142033;--ink:#e6edf7;--muted:#93a4bd;--line:#24344d;--chip:#1d2c43;color-scheme:dark}
+body.dark input,body.dark select,body.dark textarea{background:#0f1a2b;color:var(--ink);border-color:var(--line)}
+body.dark th{background:#18263b}body.dark .drop,body.dark .empty{background:#111c2d;border-color:#2a3d59}
+body.dark .tabs button{background:#142033;color:var(--muted);border-color:var(--line)}body.dark .tabs button.on{background:#e6edf7;color:#0d1522}
+body.dark .btn.sec{background:#1a2840;color:var(--ink);border-color:var(--line)}body.dark .btn.danger{background:#2a1416}
+body.dark .flag.ok{background:#0f2a1f;border-color:#1f5a3f}body.dark .flag.warn{background:#2b2210;border-color:#5c4718}body.dark .flag.bad{background:#2d1517;border-color:#6b2a2e}body.dark .flag.info{background:#10223d;border-color:#24477a}
+body.dark .chip{color:#c9d6ea}body.dark .chip.ok{background:#0f3a26;color:#86efac}body.dark .chip.bad{background:#3d1517;color:#fca5a5}body.dark .chip.warn{background:#3a2c0c;color:#fcd34d}body.dark .chip.blue{background:#13284d;color:#93c5fd}
+body.dark .kcol{background:#101b2c}body.dark .kcard,body.dark .out,body.dark .modal,body.dark .ob-card,body.dark .ob-chip{background:#142033;color:var(--ink)}body.dark .ob-emp{background:#0f2a1f;border-color:#1f5a3f}
+body.dark .cal-d{background:#111c2d}body.dark .cal-d.nutil{background:#0e1726;color:#4a5b75}body.dark .md blockquote{background:#0f2a1f}
+body.dark .card[style*="linear-gradient"]{background:#142033!important}
+
 .certrow{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--line)}
 /* nav com nomes */
 .nav a .ns{display:none}
@@ -157,7 +170,7 @@ tr:last-child td{border-bottom:0}
   <aside class="side">
     <div class="brand"><div class="logo"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/><path d="M8 11l2 2 4-4"/></svg></div><div><span class="nm">LicitaRadar</span><small>Licitações · Lei 14.133/2021</small></div></div>
     <nav class="nav" id="nav"></nav>
-    <div class="foot">Dados salvos <b>neste navegador</b>.<br>Faça backup em Configurações.</div>
+    <div class="foot">Dados salvos <b>neste aparelho</b>.<br>Faça backup em Ajustes → Dados.</div>
   </aside>
   <main id="main"></main>
 </div>
@@ -169,18 +182,18 @@ tr:last-child td{border-bottom:0}
    Fontes: BrasilAPI / Minha Receita / CNPJ.ws (dados abertos da Receita Federal)
            PNCP — API de Consultas (pncp.gov.br/api/consulta)
    ========================================================= */
-const VERSAO = "1.0";
+const VERSAO = "1.3";
 const STORE_KEY = "licitaradar_v1";
 
 /* ---------------- Estado ---------------- */
 const vazio = () => ({
-  cfg:{apiKey:"",modelo:"claude-sonnet-5-5"},
+  cfg:{apiKey:"",modelo:"claude-sonnet-5-5",perfil:{},pinHash:"",autoBloq:"0",tema:"claro",fonte:"normal",inicio:"painel",alertaDias:"20",ultimoBackup:""},
   empresa:{cnpj:"",dados:null,palavras:"",plataformas:{},docs:[],atestados:[],fin:{pl:"",capital:"",lg:"",sg:"",lc:"",faturamento:""},registros:"",obs:""},
   licitacoes:[], concorrentes:[], radar:{palavras:"",uf:"",mun:"",modalidade:"",dias:"30",vmin:"",ordem:"ader",paginas:"3",ultimos:[]}, intro:false
 });
 let S = vazio();
 try{ const raw = localStorage.getItem(STORE_KEY); if(raw) S = Object.assign(vazio(), JSON.parse(raw)); }catch(e){}
-S.cfg=S.cfg||{apiKey:"",modelo:"claude-sonnet-5-5"}; S.empresa.plataformas=S.empresa.plataformas||{}; S.radar=Object.assign(vazio().radar,S.radar||{});
+S.cfg=Object.assign(vazio().cfg,S.cfg||{}); S.empresa.plataformas=S.empresa.plataformas||{}; S.radar=Object.assign(vazio().radar,S.radar||{});
 function salvar(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(S)); }catch(e){ toast("Não consegui salvar neste navegador — faça backup em Configurações."); } }
 
 let sampleFn = null;
@@ -411,7 +424,9 @@ Documentos de habilitação e validade:
 ${docs}
 Atestados de capacidade técnica:
 ${at}
-Observações: ${e.obs||"-"}`;
+Observações: ${e.obs||"-"}
+Representante legal (usar na qualificação e assinatura das peças): ${S.cfg.perfil?.nome||"[PREENCHER]"}${S.cfg.perfil?.cargo?", "+S.cfg.perfil.cargo:""}${S.cfg.perfil?.cpf?", CPF "+S.cfg.perfil.cpf:""} | Contato: ${[S.cfg.perfil?.email,S.cfg.perfil?.tel].filter(Boolean).join(" · ")||"[PREENCHER]"}${S.cfg.perfil?.oab?" | Advogado: "+S.cfg.perfil.oab:""}
+Endereço da empresa: ${(d.endereco||"")+(d.municipio?" — "+d.municipio+"/"+(d.uf||""):"")+(d.cep?", CEP "+d.cep:"")}`;
 }
 function dadosConcorrenteTexto(c){
   if(!c) return "(não informado)";
@@ -641,7 +656,7 @@ const stChip=s=>{ const [n,c]=STATUS[s]||STATUS.analise; return `<span class="ch
 function pgPainel(){
   const L=S.licitacoes, ativos=L.filter(l=>!["ganha","perdida","descartada"].includes(l.status));
   const prox=ativos.filter(l=>l.encerramento && diasAte(l.encerramento)!==null && diasAte(l.encerramento)>=0).sort((a,b)=>new Date(a.encerramento)-new Date(b.encerramento)).slice(0,6);
-  const docsAlert=S.empresa.docs.filter(d=>d.validade).map(d=>({...d,dias:diasAte(d.validade)})).filter(d=>d.dias<=20).sort((a,b)=>a.dias-b.dias);
+  const docsAlert=S.empresa.docs.filter(d=>d.validade).map(d=>({...d,dias:diasAte(d.validade)})).filter(d=>d.dias<=(+S.cfg.alertaDias||20)).sort((a,b)=>a.dias-b.dias);
   const ganhas=L.filter(l=>l.status==="ganha"), valGanho=ganhas.reduce((s,l)=>s+(+l.valor||0),0);
   const emp=S.empresa.dados;
   const passos=[[!!emp,"Cadastre sua empresa pelo CNPJ","empresa"],[S.empresa.docs.length>0,"Inclua as certidões e validades","empresa"],[L.length>0,"Busque e salve licitações no Radar","radar"],[L.some(l=>l.analise),"Rode a análise de enquadramento com IA","analise"]];
@@ -656,7 +671,7 @@ function pgPainel(){
   </div>
   <div class="grid g2" style="margin-top:16px">
     <div class="card"><h2>Próximos prazos</h2>${prox.length?`<div class="list">${prox.map(l=>{const d=diasAte(l.encerramento);return `<div class="it"><div style="min-width:0"><div class="t">${esc(l.objeto.slice(0,110))}${l.objeto.length>110?"…":""}</div><div class="small muted">${esc(l.orgao)} · ${esc(l.municipio)}/${esc(l.uf)}</div></div><div style="text-align:right;flex-shrink:0"><span class="chip ${d<=3?"bad":d<=7?"warn":""}">${d===0?"hoje":d===1?"amanhã":"em "+d+" dias"}</span><div class="small muted">${fmtData(l.encerramento)}</div></div></div>`}).join("")}</div>`:`<div class="empty">Nenhuma licitação com prazo futuro. Salve algumas pelo Radar.</div>`}</div>
-    <div class="card"><h2>Documentos da empresa</h2>${S.empresa.docs.length?(docsAlert.length?docsAlert.map(d=>`<div class="flag ${d.dias<0?"bad":"warn"}"><div>${d.dias<0?"⛔":"⏳"}</div><div><b>${esc(d.nome)}</b> — ${d.dias<0?"vencido há "+(-d.dias)+" dia(s)":d.dias===0?"vence hoje":"vence em "+d.dias+" dia(s)"} (${fmtData(d.validade)})</div></div>`).join(""):`<div class="flag ok"><div>✅</div><div>Todos os ${S.empresa.docs.length} documentos com validade acima de 20 dias.</div></div>`):`<div class="empty">Cadastre suas certidões em <a href="#empresa" onclick="ir('empresa');return false">Minha empresa</a> para receber alertas de vencimento.</div>`}</div>
+    <div class="card"><h2>Documentos da empresa</h2>${S.empresa.docs.length?(docsAlert.length?docsAlert.map(d=>`<div class="flag ${d.dias<0?"bad":"warn"}"><div>${d.dias<0?"⛔":"⏳"}</div><div><b>${esc(d.nome)}</b> — ${d.dias<0?"vencido há "+(-d.dias)+" dia(s)":d.dias===0?"vence hoje":"vence em "+d.dias+" dia(s)"} (${fmtData(d.validade)})</div></div>`).join(""):`<div class="flag ok"><div>✅</div><div>Todos os ${S.empresa.docs.length} documentos com validade acima de ${S.cfg.alertaDias||20} dias.</div></div>`):`<div class="empty">Cadastre suas certidões em <a href="#empresa" onclick="ir('empresa');return false">Minha empresa</a> para receber alertas de vencimento.</div>`}</div>
   </div>
   <div class="card" style="margin-top:16px"><h2>Funil <button class="btn sec sm" onclick="ir('licitacoes')">Ver todas</button></h2>
     <div class="row">${Object.entries(STATUS).map(([k,[n,c]])=>`<div class="fit" style="padding:10px 14px;border:1px solid var(--line);border-radius:12px;min-width:120px"><div class="small muted">${n}</div><div style="font-size:22px;font-weight:800">${L.filter(l=>(l.status||"analise")===k).length}</div></div>`).join("")}</div>
@@ -1405,42 +1420,115 @@ function boasVindas(){
 function fimBoasVindas(explorar){ S.intro=true; salvar(); fecharModal(); if(explorar) render(); }
 function abrirBoasVindas(){ OB.passo=0; OB.dados=S.empresa.dados; OB.chips=new Set(); boasVindas(); }
 
-/* ================= PÁGINA: CONFIGURAÇÕES ================= */
+/* ================= PÁGINA: AJUSTES ================= */
+async function hashPIN(pin){ const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode("licitaradar:"+pin)); return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join(""); }
+function aplicarPrefs(){
+  const c=S.cfg||{}; const dark=c.tema==="escuro"||(c.tema==="auto"&&window.matchMedia&&matchMedia("(prefers-color-scheme: dark)").matches);
+  document.body.classList.toggle("dark",!!dark); document.body.classList.toggle("fonteG",c.fonte==="grande");
+}
+let CFG_ABA="conta";
 function pgConfig(){
-  const tam=(()=>{try{return (localStorage.getItem(STORE_KEY)||"").length;}catch(e){return 0;}})();
-  return header("Configurações","Backup, restauração e informações do sistema.")+
-  `<div class="grid g2"><div class="card"><h2>Backup dos dados</h2><p class="small muted">Tudo fica salvo apenas neste navegador (${(tam/1024).toFixed(0)} KB). Faça backup com frequência e para levar os dados a outro computador.</p>
+  const c=S.cfg, p=c.perfil||{}; const tam=(()=>{try{return (localStorage.getItem(STORE_KEY)||"").length;}catch(e){return 0;}})();
+  const abas=[["conta","👤 Conta"],["seguranca","🔒 Segurança"],["prefs","🎨 Preferências"],["ia","✨ IA"],["dados","💾 Dados"],["sobre","ℹ️ Sobre"]];
+  let corpo="";
+  if(CFG_ABA==="conta") corpo=`<div class="card"><h2>Seu perfil</h2><p class="small muted" style="margin-top:-6px">Usado para preencher automaticamente as minutas (impugnação, recurso, esclarecimento) com o representante da empresa.</p>
+    <div class="grid g2">${[["nome","Nome completo"],["cargo","Cargo (ex.: Sócio-administrador)"],["cpf","CPF do representante (opcional)"],["email","E-mail para contato"],["tel","Telefone / WhatsApp"],["oab","Advogado responsável (opcional)"]].map(([k,n])=>`<div><label>${n}</label><input data-pf="${k}" value="${esc(p[k]||"")}"></div>`).join("")}</div>
+    <div class="right" style="justify-content:flex-start"><button class="btn sm" id="pfSalvar">Salvar perfil</button></div></div>
+   <div class="card" style="margin-top:16px"><h2>Sair</h2>
+    <div class="flag info"><div>ℹ️</div><div class="small">Por enquanto não há conta online: tudo fica salvo <b>neste aparelho</b>. O login com e-mail e senha (dados na nuvem e em vários aparelhos) chega com o Supabase.</div></div>
+    <div class="row" style="margin-top:10px"><button class="btn sec fit" id="bBloq" ${c.pinHash?"":"disabled"}>🔒 Bloquear agora</button><button class="btn danger fit" id="bSair">⎋ Sair deste aparelho</button></div>
+    <p class="small muted">${c.pinHash?"“Bloquear” fecha o app até digitar o PIN.":"Crie um PIN na aba Segurança para poder bloquear."} “Sair deste aparelho” baixa um backup e apaga os dados daqui — use em aparelho emprestado.</p></div>`;
+  if(CFG_ABA==="seguranca") corpo=`<div class="card"><h2>🔒 PIN de acesso</h2><p class="small muted" style="margin-top:-6px">Protege o app neste aparelho com um PIN de 4 a 8 números. Esquecer o PIN obriga a apagar os dados (ou restaurar um backup).</p>
+    ${c.pinHash?`<div class="flag ok"><div>✅</div><div>PIN ativo.</div></div>`:""}
+    <div class="grid g2"><div><label>${c.pinHash?"Novo PIN":"Crie um PIN"}</label><input id="pin1" type="password" inputmode="numeric" maxlength="8" placeholder="••••"></div><div><label>Repita o PIN</label><input id="pin2" type="password" inputmode="numeric" maxlength="8" placeholder="••••"></div></div>
+    <label>Bloquear sozinho depois de</label><select id="autoBloq">${[["0","Nunca"],["5","5 minutos sem uso"],["15","15 minutos sem uso"],["30","30 minutos sem uso"],["60","1 hora sem uso"]].map(([k,n])=>`<option value="${k}" ${String(c.autoBloq||"0")===k?"selected":""}>${n}</option>`).join("")}</select>
+    <div class="right" style="justify-content:flex-start"><button class="btn sm" id="pinSalvar">${c.pinHash?"Trocar PIN":"Ativar PIN"}</button>${c.pinHash?'<button class="btn ghost sm" id="pinRemover">Remover PIN</button>':""}</div>
+    <p class="small muted">O PIN impede que outra pessoa abra o app no seu celular. Ele não substitui um login online.</p></div>`;
+  if(CFG_ABA==="prefs") corpo=`<div class="card"><h2>🎨 Preferências</h2><div class="grid g2">
+    <div><label>Tema</label><select data-cf="tema">${[["claro","☀️ Claro"],["escuro","🌙 Escuro"],["auto","Automático (segue o celular)"]].map(([k,n])=>`<option value="${k}" ${(c.tema||"claro")===k?"selected":""}>${n}</option>`).join("")}</select></div>
+    <div><label>Tamanho da letra</label><select data-cf="fonte">${[["normal","Normal"],["grande","Grande"]].map(([k,n])=>`<option value="${k}" ${(c.fonte||"normal")===k?"selected":""}>${n}</option>`).join("")}</select></div>
+    <div><label>Tela inicial ao abrir</label><select data-cf="inicio">${PAGINAS.filter(x=>x[0]!=="config").map(([k,n])=>`<option value="${k}" ${(c.inicio||"painel")===k?"selected":""}>${n}</option>`).join("")}</select></div>
+    <div><label>Avisar certidões com antecedência de</label><select data-cf="alertaDias">${["7","15","20","30"].map(k=>`<option value="${k}" ${String(c.alertaDias||"20")===k?"selected":""}>${k} dias</option>`).join("")}</select></div>
+    <div><label>Estado padrão do Radar</label><select data-rd="uf"><option value="">Brasil inteiro</option>${UFS.map(u=>`<option ${u===S.radar.uf?"selected":""}>${u}</option>`).join("")}</select></div>
+    <div><label>Palavras-chave padrão</label><input data-rd="palavras" value="${esc(S.radar.palavras||S.empresa.palavras||"")}"></div>
+    </div><div class="right" style="justify-content:flex-start"><button class="btn sec sm" onclick="abrirBoasVindas()">Rever tela de boas-vindas</button></div></div>`;
+  if(CFG_ABA==="ia") corpo=`<div class="card"><h2>✨ IA dentro do site</h2>
+   <p class="small muted" style="margin-top:-6px">Para a análise rodar aqui (sem copiar e colar), cole uma chave da API da Anthropic. Ela fica salva só neste aparelho. O uso é cobrado pela Anthropic na sua conta — normalmente centavos a poucos reais por edital. Não use em aparelho compartilhado.</p>
+   ${c.apiKey?`<div class="flag ok"><div>✅</div><div>Chave configurada — a IA roda dentro do site.</div></div>`:""}
+   <div class="row"><div><label>Chave da API</label><input id="cfgKey" type="password" placeholder="sk-ant-..." value="${esc(c.apiKey||"")}"></div><div><label>Modelo</label><select id="cfgMod">${[["claude-sonnet-5-5","Sonnet (recomendado)"],["claude-opus-5-5","Opus (mais profundo, mais caro)"],["claude-haiku-5-5","Haiku (rápido, mais barato)"]].map(([k,n])=>`<option value="${k}" ${k===c.modelo?"selected":""}>${n}</option>`).join("")}</select></div></div>
+   <div class="right" style="justify-content:flex-start"><button class="btn sm" id="cfgSalvar">Salvar chave</button>${c.apiKey?'<button class="btn ghost sm" id="cfgLimpar">Remover chave</button>':""}<a class="btn ghost sm" href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">Criar chave ↗</a></div></div>`;
+  if(CFG_ABA==="dados") corpo=`<div class="card"><h2>💾 Backup</h2><p class="small muted" style="margin-top:-6px">Tudo fica salvo neste aparelho (${(tam/1024).toFixed(0)} KB). ${c.ultimoBackup?`Último backup: <b>${fmtDataHora(c.ultimoBackup)}</b>.`:"<b>Você ainda não fez nenhum backup.</b>"}</p>
    <div class="row"><button class="btn fit" id="bExp">Baixar backup (.json)</button><button class="btn sec fit" id="bCop">Copiar backup</button></div>
    <h3>Restaurar</h3><div class="drop" id="dImp"><b>Enviar arquivo de backup</b><input type="file" accept=".json" class="hide" id="fImp"></div>
-   <label>…ou cole o conteúdo do backup</label><textarea id="tImp" style="min-height:70px"></textarea><div class="right"><button class="btn sec sm" id="bImp">Restaurar do texto</button></div>
-  </div>
-  <div class="card"><h2>Sobre</h2><dl class="dl small">
+   <label>…ou cole o conteúdo do backup</label><textarea id="tImp" style="min-height:70px"></textarea><div class="right"><button class="btn sec sm" id="bImp">Restaurar do texto</button></div></div>
+   <div class="card" style="margin-top:16px"><h2>📊 Exportar para planilha</h2><p class="small muted" style="margin-top:-6px">Arquivos .csv que abrem no Excel ou Google Planilhas.</p>
+   <div class="row"><button class="btn sec fit" onclick="exportarCSV('licitacoes')">Minhas licitações</button><button class="btn sec fit" onclick="exportarCSV('prazos')">Prazos</button><button class="btn sec fit" onclick="exportarCSV('certidoes')">Certidões</button><button class="btn sec fit" onclick="exportarCSV('concorrentes')">Concorrentes</button></div></div>
+   <div class="card" style="margin-top:16px;border-color:#fecaca"><h2>Zona de perigo</h2><button class="btn danger sm" onclick="confirmar('Apagar TODOS os dados deste aparelho? Faça backup antes.',()=>{S=vazio();salvar();render();toast('Dados apagados');})">Apagar todos os dados</button></div>`;
+  if(CFG_ABA==="sobre") corpo=`<div class="card"><h2>ℹ️ Sobre</h2><dl class="dl small">
    <dt>Versão</dt><dd>LicitaRadar ${VERSAO}</dd>
-   <dt>Dados de CNPJ</dt><dd>Dados abertos da Receita Federal via BrasilAPI, Minha Receita e CNPJ.ws (gratuitos, sem chave)</dd>
-   <dt>Licitações</dt><dd>PNCP — API pública de consultas (pncp.gov.br/api/consulta)</dd>
-   <dt>IA</dt><dd>${sampleFn?"Integrada (Claude)":"Modo prompt (copiar e colar no Claude)"}</dd>
-   <dt>Base legal</dt><dd>Lei 14.133/2021 · LC 123/2006 · jurisprudência do TCU</dd></dl>
-   <h3>Inteligência artificial dentro do site</h3>
-   <p class="small muted">Para a análise rodar aqui (sem copiar e colar), cole uma chave da API da Anthropic. Ela fica salva só neste navegador. O uso é cobrado pela Anthropic na sua conta — normalmente centavos a poucos reais por edital. Não use em computador compartilhado.</p>
-   <div class="row"><div><label>Chave da API</label><input id="cfgKey" type="password" placeholder="sk-ant-..." value="${esc(S.cfg.apiKey||"")}"></div><div><label>Modelo</label><select id="cfgMod">${[["claude-sonnet-5-5","Sonnet (recomendado)"],["claude-opus-5-5","Opus (mais profundo, mais caro)"],["claude-haiku-5-5","Haiku (rápido, mais barato)"]].map(([k,n])=>`<option value="${k}" ${k===S.cfg.modelo?"selected":""}>${n}</option>`).join("")}</select></div></div>
-   <div class="right" style="justify-content:flex-start"><button class="btn sm" id="cfgSalvar">Salvar chave</button>${S.cfg.apiKey?'<button class="btn ghost sm" id="cfgLimpar">Remover chave</button>':""}<a class="btn ghost sm" href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">Criar chave ↗</a></div>
-   <h3>Apresentação</h3><button class="btn sec sm" onclick="abrirBoasVindas()">Rever tela de boas-vindas</button>
-   <h3>Zona de perigo</h3><button class="btn danger sm" onclick="confirmar('Apagar TODOS os dados deste navegador? Faça backup antes.',()=>{S=vazio();salvar();render();toast('Dados apagados');})">Apagar todos os dados</button>
-  </div></div>`;
+   <dt>Licitações</dt><dd>PNCP — API pública de consultas, coletada 3× ao dia</dd>
+   <dt>Contratos (Mercado)</dt><dd>PNCP — contratos assinados, somente fornecedores com CNPJ</dd>
+   <dt>CNPJ</dt><dd>Dados abertos da Receita Federal (BrasilAPI, Minha Receita, CNPJ.ws)</dd>
+   <dt>IA</dt><dd>${sampleFn?"Integrada (Claude)":c.apiKey?"Chave própria (API Anthropic)":"Copiar e colar no Claude"}</dd>
+   <dt>Base legal</dt><dd>Lei 14.133/2021 · LC 123/2006 · jurisprudência do TCU</dd>
+   <dt>Seus dados</dt><dd>Ficam só neste aparelho; nada é enviado ao repositório público</dd></dl>
+   <div class="flag warn" style="margin-top:12px"><div>⚖️</div><div class="small">As análises e minutas geradas pela IA são apoio e precisam de revisão por advogado ou responsável antes do protocolo.</div></div></div>`;
+  return header("Ajustes","Conta, segurança, preferências, IA e seus dados.")+
+  `<div class="tabs">${abas.map(([k,n])=>`<button class="${k===CFG_ABA?"on":""}" onclick="CFG_ABA='${k}';render()">${n}</button>`).join("")}</div>${corpo}`;
 }
 function posConfig(){
-  $("#cfgSalvar").onclick=()=>{ S.cfg.apiKey=$("#cfgKey").value.trim(); S.cfg.modelo=$("#cfgMod").value; salvar(); render(); toast(S.cfg.apiKey?"Chave salva — a IA agora roda dentro do site":"Chave removida"); };
-  const lp=$("#cfgLimpar"); if(lp) lp.onclick=()=>{ S.cfg.apiKey=""; salvar(); render(); toast("Chave removida"); };
-  const dump=()=>JSON.stringify({app:"LicitaRadar",versao:VERSAO,exportadoEm:new Date().toISOString(),dados:S},null,1);
-  $("#bExp").onclick=()=>baixar(`licitaradar-backup-${new Date().toISOString().slice(0,10)}.json`,dump(),"application/json");
-  $("#bCop").onclick=()=>copiar(dump());
-  const restaurar=txt=>{ try{ const j=JSON.parse(txt); const d=j.dados||j; if(!d.empresa||!d.licitacoes) throw new Error("formato"); S=Object.assign(vazio(),d); salvar(); render(); toast("Backup restaurado ✔"); }catch(e){ toast("Arquivo de backup inválido"); } };
-  $("#dImp").onclick=()=>$("#fImp").click(); $("#fImp").onchange=async()=>{ const f=$("#fImp").files[0]; if(f) restaurar(await f.text()); };
-  $("#bImp").onclick=()=>restaurar($("#tImp").value);
+  const c=S.cfg; const on=(id,fn)=>{ const e=$(id); if(e) e.onclick=fn; };
+  on("#pfSalvar",()=>{ c.perfil=c.perfil||{}; document.querySelectorAll("[data-pf]").forEach(i=>c.perfil[i.dataset.pf]=i.value.trim()); salvar(); toast("Perfil salvo ✔"); });
+  on("#bBloq",()=>bloquear());
+  on("#bSair",()=>confirmar("Sair deste aparelho? Vou baixar um backup e depois apagar todos os dados daqui.",()=>{ backupBaixar(); setTimeout(()=>{ try{ localStorage.removeItem(STORE_KEY); }catch(e){} S=vazio(); location.hash=""; location.reload(); },1200); }));
+  on("#pinSalvar",async()=>{ const a=$("#pin1").value, b=$("#pin2").value; if(a||b){ if(!/^\d{4,8}$/.test(a)){ toast("O PIN deve ter de 4 a 8 números"); return; } if(a!==b){ toast("Os PINs não conferem"); return; } c.pinHash=await hashPIN(a); c.pinLen=a.length; }
+    c.autoBloq=$("#autoBloq").value; salvar(); render(); toast(c.pinHash?"PIN ativo 🔒":"Preferência salva"); });
+  on("#pinRemover",()=>confirmar("Remover o PIN deste aparelho?",()=>{ c.pinHash=""; c.autoBloq="0"; salvar(); render(); toast("PIN removido"); }));
+  const ab=$("#autoBloq"); if(ab) ab.onchange=()=>{ c.autoBloq=ab.value; salvar(); toast("Salvo"); };
+  document.querySelectorAll("[data-cf]").forEach(i=>i.onchange=()=>{ c[i.dataset.cf]=i.value; salvar(); aplicarPrefs(); toast("Preferência salva"); });
+  document.querySelectorAll("[data-rd]").forEach(i=>i.onchange=()=>{ S.radar[i.dataset.rd]=i.value; if(i.dataset.rd==="uf") S.radar.mun=""; S.radar.ultimos=[]; salvar(); toast("Salvo"); });
+  on("#cfgSalvar",()=>{ c.apiKey=$("#cfgKey").value.trim(); c.modelo=$("#cfgMod").value; salvar(); render(); toast(c.apiKey?"Chave salva — a IA agora roda dentro do site":"Chave removida"); });
+  on("#cfgLimpar",()=>{ c.apiKey=""; salvar(); render(); toast("Chave removida"); });
+  on("#bExp",()=>backupBaixar()); on("#bCop",()=>{ copiar(dumpBackup()); c.ultimoBackup=new Date().toISOString(); salvar(); });
+  const restaurar=txt=>{ try{ const j=JSON.parse(txt); const d=j.dados||j; if(!d.empresa||!d.licitacoes) throw new Error("formato"); S=Object.assign(vazio(),d); S.cfg=Object.assign(vazio().cfg,S.cfg||{}); salvar(); aplicarPrefs(); render(); toast("Backup restaurado ✔"); }catch(e){ toast("Arquivo de backup inválido"); } };
+  on("#dImp",()=>$("#fImp").click()); const fi=$("#fImp"); if(fi) fi.onchange=async()=>{ const f=fi.files[0]; if(f) restaurar(await f.text()); };
+  on("#bImp",()=>restaurar($("#tImp").value));
 }
+const dumpBackup=()=>JSON.stringify({app:"LicitaRadar",versao:VERSAO,exportadoEm:new Date().toISOString(),dados:S},null,1);
+function backupBaixar(){ baixar(`licitaradar-backup-${new Date().toISOString().slice(0,10)}.json`,dumpBackup(),"application/json"); S.cfg.ultimoBackup=new Date().toISOString(); salvar(); }
+function exportarCSV(tipo){
+  const q=v=>`"${String(v??"").replace(/"/g,'""')}"`; let cab=[], rows=[];
+  if(tipo==="licitacoes"){ cab=["Objeto","Órgão","Cidade","UF","Valor estimado","Modalidade","Sessão/encerramento","Status","Plataforma","Link"]; rows=S.licitacoes.map(l=>[limpaObj(l.objeto),l.orgao,l.municipio,l.uf,l.valor,l.modalidade,fmtDataHora(l.sessao||l.encerramento),(STATUS[l.status||"analise"]||[""])[0],l.plataforma||"",l.link||""]); }
+  if(tipo==="prazos"){ cab=["Data","Prazo","Licitação/Documento","Observação"]; rows=eventosTodos().map(e=>[fmtData(e.data),e.titulo,e.lic?limpaObj(e.lic.objeto):"",e.info]); }
+  if(tipo==="certidoes"){ cab=["Documento","Validade","Dias restantes","Arquivo"]; rows=S.empresa.docs.map(d=>[d.nome,d.validade?fmtData(d.validade):"",d.validade?diasAte(d.validade):"",d.arquivo||""]); }
+  if(tipo==="concorrentes"){ cab=["Razão social","CNPJ","Situação","Porte","Abertura","Capital social","Cidade/UF","Anotações"]; rows=S.concorrentes.map(c=>{const d=c.dados||{};return [d.razao,fmtCNPJ(c.cnpj),d.situacao,d.porte,fmtData(d.abertura),d.capital,(d.municipio||"")+"/"+(d.uf||""),c.notas]}); }
+  if(!rows.length){ toast("Nada para exportar ainda"); return; }
+  baixar(`licitaradar-${tipo}-${new Date().toISOString().slice(0,10)}.csv`,"﻿"+[cab,...rows].map(r=>r.map(q).join(";")).join("\r\n"),"text/csv");
+}
+/* ---- bloqueio por PIN ---- */
+let ultimaAtividade=Date.now(), bloqueado=false;
+function bloquear(){
+  if(!S.cfg.pinHash) return; bloqueado=true;
+  $("#layer").innerHTML=`<div class="ob-bg" style="z-index:120"><div class="ob-card" style="text-align:center;max-width:360px"><div class="logo-big"><svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg></div>
+   <h2 style="margin:14px 0 4px">LicitaRadar bloqueado</h2><p class="small muted" style="margin:0 0 14px">${esc(S.cfg.perfil?.nome?("Olá, "+S.cfg.perfil.nome.split(" ")[0]+". "):"")}Digite seu PIN para continuar.</p>
+   <input id="pinIn" type="password" inputmode="numeric" maxlength="8" autocomplete="off" style="text-align:center;font-size:26px;letter-spacing:10px;padding:14px" placeholder="••••">
+   <div id="pinMsg" class="small" style="color:var(--bad);min-height:20px;margin-top:6px"></div>
+   <button class="btn" id="pinOk" style="width:100%;padding:13px">Desbloquear</button>
+   <button class="btn ghost sm" style="margin-top:10px" id="pinEsq">Esqueci o PIN</button></div></div>`;
+  const inp=$("#pinIn"); setTimeout(()=>inp.focus(),100);
+  const tentar=async()=>{ if(await hashPIN(inp.value)===S.cfg.pinHash){ bloqueado=false; ultimaAtividade=Date.now(); fecharModal(); toast("Bem-vindo de volta"); } else { $("#pinMsg").textContent="PIN incorreto"; inp.value=""; inp.focus(); } };
+  $("#pinOk").onclick=tentar; inp.onkeydown=e=>{ if(e.key==="Enter") tentar(); }; inp.oninput=()=>{ if(inp.value.length>=4 && inp.value.length===(S.cfg.pinLen||0)) tentar(); };
+  $("#pinEsq").onclick=()=>{ $("#pinMsg").innerHTML=`Sem o PIN, a única saída é apagar os dados deste aparelho (depois você pode restaurar um backup). <button class="btn danger sm" style="margin-top:8px" id="pinApagar">Apagar dados e entrar</button>`; $("#pinApagar").onclick=()=>{ try{ localStorage.removeItem(STORE_KEY); }catch(e){} location.hash=""; location.reload(); }; };
+}
+["click","keydown","touchstart","scroll"].forEach(ev=>window.addEventListener(ev,()=>{ ultimaAtividade=Date.now(); },{passive:true}));
+setInterval(()=>{ const m=+(S.cfg?.autoBloq||0); if(m && S.cfg.pinHash && !bloqueado && Date.now()-ultimaAtividade>m*60000) bloquear(); },20000);
+document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible"){ const m=+(S.cfg?.autoBloq||0); if(m && S.cfg.pinHash && !bloqueado && Date.now()-ultimaAtividade>m*60000) bloquear(); } });
 
+
+if(!location.hash && S.cfg.inicio && PAGINAS.some(p=>p[0]===S.cfg.inicio)) pagina=S.cfg.inicio;
+aplicarPrefs();
 render();
-if(!S.intro && !S.empresa.dados) abrirBoasVindas();
+if(S.cfg.pinHash) bloquear(); else if(!S.intro && !S.empresa.dados) abrirBoasVindas();
 </script>
 </body>
 </html>
