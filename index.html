@@ -106,6 +106,7 @@ tr:last-child td{border-bottom:0}
 .pill-status{font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px}
 .stack>*+*{margin-top:16px}
 .hide{display:none!important}
+.certrow{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--line)}
 /* nav com nomes */
 .nav a .ns{display:none}
 .kanban{display:flex;gap:12px;overflow-x:auto;padding-bottom:12px;align-items:flex-start;scroll-snap-type:x proximity}
@@ -197,9 +198,10 @@ function cnpjValido(c){
   return calc(12)===+c[12] && calc(13)===+c[13];
 }
 const brl = v => (v===null||v===undefined||v==="")?"—":Number(v).toLocaleString("pt-BR",{style:"currency",currency:"BRL",maximumFractionDigits:2});
-function fmtData(d){ if(!d) return "—"; const x=new Date(d); if(isNaN(x)) return String(d); return x.toLocaleDateString("pt-BR"); }
+const parseD=d=>(typeof d==="string"&&/^\d{4}-\d{2}-\d{2}$/.test(d))?new Date(d+"T12:00:00"):new Date(d);
+function fmtData(d){ if(!d) return "—"; const x=parseD(d); if(isNaN(x)) return String(d); return x.toLocaleDateString("pt-BR"); }
 function fmtDataHora(d){ if(!d) return "—"; const x=new Date(d); if(isNaN(x)) return String(d); return x.toLocaleString("pt-BR",{dateStyle:"short",timeStyle:"short"}); }
-function diasAte(d){ if(!d) return null; const x=new Date(d); if(isNaN(x)) return null; const h=new Date(); h.setHours(0,0,0,0); const y=new Date(x); y.setHours(0,0,0,0); return Math.round((y-h)/864e5); }
+function diasAte(d){ if(!d) return null; const x=parseD(d); if(isNaN(x)) return null; const h=new Date(); h.setHours(0,0,0,0); const y=new Date(x); y.setHours(0,0,0,0); return Math.round((y-h)/864e5); }
 function semAcento(s){ return String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase(); }
 const STOP = new Set("para com sem sobre entre pela pelo pelos pelas este esta esse essa como mais menos todo toda todos todas outros outras outro outra demais servicos servico aquisicao contratacao empresa especializada fornecimento eventual futura registro precos preco item itens lote lotes atender necessidades conforme termo referencia edital anexo municipio municipal estado estadual secretaria prefeitura atraves demanda forma objeto destinados destinado destinadas visando visto quando onde cujo cuja suas seus pelo nao".split(" "));
 function tokens(s){ return semAcento(s).split(/[^a-z0-9]+/).filter(w=>w.length>=4 && !STOP.has(w)); }
@@ -674,8 +676,85 @@ async function posPainel(){
   <div class="right"><button class="btn sec sm" onclick="ir('radar')">Ver todas no Radar →</button></div></div>`;
 }
 
+/* ================= CENTRAL DE CERTIDÕES ================= */
+const SEFAZ_CND={AC:"http://sefazonline.ac.gov.br/sefazonline/app.cndprincipal",AL:"https://contribuinte.sefaz.al.gov.br/certidao/#/emitir-certidao",AM:"http://sistemas.sefaz.am.gov.br/GAE/mnt/dividaAtiva/certidaoNegativa/emitirCertidaoNegativaNaoContPortal.do",AP:"https://www.sefaz.ap.gov.br/sate/seg/SEGf_AcessarFuncao.jsp?cdFuncao=DIA_060",BA:"https://servicos.sefaz.ba.gov.br/sistemas/DSCRE/Modulos/Publico/EmissaoCertidao.aspx",CE:"https://consultapublica.sefaz.ce.gov.br/certidaonegativa/preparar-consultar",DF:"https://ww1.receita.fazenda.df.gov.br/cidadao/certidoes/Certidao",ES:"https://s2-internet.sefaz.es.gov.br/certidao/cnd",GO:"http://www.sefaz.go.gov.br/Certidao/Emissao/",MA:"https://sistemas1.sefaz.ma.gov.br/certidoes/jsp/emissaoCertidaoNegativa/emissaoCertidaoNegativa.jsf",MG:"https://cdt.fazenda.mg.gov.br/",MS:"https://servicos.efazenda.ms.gov.br/pndfis/Home/Emissao",MT:"https://www.sefaz.mt.gov.br/cnd/certidao/servlet/ServletRotdAberto?origem=60",PA:"https://app.sefa.pa.gov.br/emissao-certidao/template.action",PB:"https://www.sefaz.pb.gov.br/servirtual/certidoes/emissao-de-certidao-de-debitos-cidadao",PE:"https://efisco.sefaz.pe.gov.br/sfi_trb_gpf/PREmitirCertidaoNegativaNarrativaDebitoFiscal",PI:"https://siatweb.sefaz.pi.gov.br/portal-publico/",PR:"https://cdwfazenda.paas.pr.gov.br/cdwportal/certidao/automatica",RJ:"https://crf-unificada-web.fazenda.rj.gov.br/crf-unificada-web/#/",RN:"https://uvt2.set.rn.gov.br/#/services/certidao-negativa/emitir",RO:"https://portalcontribuinte.sefin.ro.gov.br/Publico/certidaoNegativa.jsp",RR:"https://www.sefaz.rr.gov.br/empresa/certidao-negativa-de-debitos",RS:"https://www.sefaz.rs.gov.br/sat/CertidaoSitFiscalSolic.aspx",SC:"https://tributario.sef.sc.gov.br/tax.NET/Sat.CtaCte.Web/SolicitacaoCnd.aspx",SE:"https://www.sefaz.se.gov.br/SitePages/emissao_certidao_negativa.aspx",SP:"https://www4.fazenda.sp.gov.br/SIDEB/CertidaoNegativaDebitos/EmitirECND",TO:"https://www.to.gov.br/sefaz/cnd-certidao-negativa-de-debitos/7h3xx8lr88vg"};
+const gbusca=q=>"https://www.google.com/search?q="+encodeURIComponent(q);
+const CERTS=[
+  {id:"federal",nome:"CND Federal (Receita/PGFN)",dias:180,det:/d[ií]vida ativa da uni[aã]o|cr[eé]ditos tribut[aá]rios federais/i,url:()=>"https://www.gov.br/pt-br/servicos/emitir-certidao-de-regularidade-fiscal-perante-a-fazenda-nacional",dica:"Abra “Certidão de pessoa jurídica”, cole o CNPJ da matriz."},
+  {id:"fgts",nome:"CRF — FGTS",dias:30,det:/certificado de regularidade do fgts|\bCRF\b/i,url:()=>"https://consulta-crf.caixa.gov.br/consultacrf/pages/consultaEmpregador.jsf",dica:"Cole o CNPJ, resolva o captcha e clique em “Obter certificado”. Vale ~30 dias."},
+  {id:"cndt",nome:"CNDT — Débitos Trabalhistas",dias:180,det:/d[eé]bitos trabalhistas/i,url:()=>"https://cndt-certidao.tst.jus.br/inicio.faces",dica:"Clique em “Emitir certidão”, cole o CNPJ."},
+  {id:"estadual",nome:"Certidão Estadual",dias:null,det:/secretaria (de estado )?da fazenda|sefa[z]?\b|tributos estaduais|d[ií]vida ativa do estado|receita estadual/i,url:(uf)=>SEFAZ_CND[uf]||gbusca("certidão negativa débitos estaduais "+uf),dica:"Emitida pela Secretaria da Fazenda do seu estado."},
+  {id:"municipal",nome:"Certidão Municipal",dias:null,det:/prefeitura|munic[ií]pio de|tributos municipais|secretaria municipal/i,url:(uf,mun)=>gbusca(`certidão negativa de débitos municipais prefeitura de ${mun||""} ${uf||""} emitir`),dica:"Cada prefeitura tem seu portal — o botão faz a busca do portal da sua cidade."},
+  {id:"falencia",nome:"Certidão de Falência e Recuperação Judicial",dias:null,det:/fal[eê]ncia|recupera[cç][aã]o judicial|concordata/i,url:(uf,mun)=>gbusca(`certidão negativa falência recuperação judicial tribunal de justiça ${uf||""} emitir online`),dica:"Emitida pelo Tribunal de Justiça do estado da sede (às vezes da comarca)."},
+  {id:"tcu",nome:"Certidão consolidada TCU/CGU (sanções)",dias:null,det:/consulta consolidada de pessoa jur[ií]dica|tribunal de contas da uni[aã]o/i,url:()=>"https://certidoes-apf.apps.tcu.gov.br/",dica:"Mostra CEIS, CNEP, inidôneos e improbidade. Muitos órgãos consultam isso."},
+  {id:"simples",nome:"Comprovante do Simples Nacional",dias:null,det:/simples nacional/i,url:()=>"https://consopt.www8.receita.fazenda.gov.br/consultaoptantes",dica:"Só se sua empresa for optante e o edital pedir."},
+  {id:"cnpj",nome:"Comprovante de inscrição no CNPJ",dias:null,det:/comprovante de inscri[cç][aã]o e de situa[cç][aã]o cadastral/i,url:()=>"https://solucoes.receita.fazenda.gov.br/servicos/cnpjreva/cnpjreva_solicitacao.asp",dica:"Cartão CNPJ atualizado."},
+  {id:"junta",nome:"Certidão Simplificada (Junta Comercial)",dias:null,det:/certid[aã]o simplificada|junta comercial/i,url:(uf)=>gbusca("certidão simplificada junta comercial "+(uf||"")+" emitir"),dica:"Alguns editais exigem com até 30–90 dias de emissão."}
+];
+function docDaCert(id){ return S.empresa.docs.find(d=>d.certId===id) || S.empresa.docs.find(d=>!d.certId && semAcento(d.nome)===semAcento(CERTS.find(c=>c.id===id).nome)); }
+function statusCert(doc){
+  if(!doc||!doc.validade) return ['<span class="chip">sem certidão</span>',null];
+  const d=diasAte(doc.validade); return [d<0?`<span class="chip bad">vencida há ${-d}d</span>`:d<=15?`<span class="chip warn">vence em ${d}d</span>`:`<span class="chip ok">válida · ${d}d</span>`,d];
+}
+let CERT_UF=null;
+function centralCertidoesHTML(){
+  const e=S.empresa, uf=CERT_UF||e.dados?.uf||S.radar.uf||"PA", mun=e.dados?.municipio||"";
+  const lin=CERTS.map(c=>{ const doc=docDaCert(c.id); const [chip,d]=statusCert(doc);
+    return `<div class="certrow"><div style="min-width:0;flex:1"><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"><b>${esc(c.nome)}</b>${chip}</div><div class="small muted">${esc(c.dica)}${doc?.validade?` · validade ${fmtData(doc.validade)}`:""}${doc?.arquivo?` · 📎 ${esc(doc.arquivo)}`:""}</div></div>
+    <div style="display:flex;gap:6px;flex-shrink:0"><a class="btn sm ${d!==null&&d>15?"sec":""}" href="${esc(c.url(uf,mun))}" target="_blank" rel="noopener" onclick="copiarCNPJCert()">Emitir ↗</a><button class="btn ghost sm" onclick="editarValidade('${c.id}')">📅</button></div></div>`; }).join("");
+  const pend=CERTS.filter(c=>{ const [,d]=statusCert(docDaCert(c.id)); return d===null||d<=15; }).filter(c=>["federal","fgts","cndt","estadual","municipal","falencia"].includes(c.id));
+  return `<div class="card" id="central"><h2>🗂️ Central de certidões <select id="certUf" style="width:auto;padding:6px 10px">${UFS.map(u=>`<option ${u===uf?"selected":""}>${u}</option>`).join("")}</select></h2>
+   <p class="small muted" style="margin-top:-6px">1) Toque em <b>Emitir</b> — o site oficial abre e o seu CNPJ já fica copiado, é só colar. 2) Baixe o PDF. 3) Envie o PDF aqui: a validade é lida sozinha e os alertas se atualizam.</p>
+   <div class="drop" id="dCert"><b>📎 Enviar PDFs das certidões</b><div class="small muted">pode enviar várias de uma vez — identificamos o tipo e a validade</div><input type="file" accept=".pdf" multiple class="hide" id="fCert"></div>
+   ${pend.length?`<div class="flag warn" style="margin-top:12px"><div>⏳</div><div><b>${pend.length} certidão(ões) para emitir ou renovar:</b> ${pend.map(c=>esc(c.nome.split(" (")[0].split(" —")[0])).join(", ")}. <button class="btn sm" style="margin-top:6px" onclick="renovarTudo()">Renovar em sequência →</button></div></div>`:`<div class="flag ok" style="margin-top:12px"><div>✅</div><div>Certidões principais em dia.</div></div>`}
+   <div style="margin-top:6px">${lin}</div>
+   <div class="small muted" style="margin-top:10px">Se a empresa tem <b>SICAF</b> atualizado, as certidões federais e trabalhista já aparecem consolidadas lá para pregões no Compras.gov.br. Os sites oficiais pedem captcha — por isso a emissão é feita por você, em poucos segundos.</div></div>`;
+}
+function copiarCNPJCert(){ const c=S.empresa.cnpj; if(!c){ toast("Cadastre o CNPJ da empresa primeiro"); return; } try{ navigator.clipboard.writeText(c).then(()=>toast("CNPJ copiado — cole no site oficial"),()=>{}); }catch(e){} }
+function garantirDoc(id){ let d=docDaCert(id); if(!d){ d={id:uid(),nome:CERTS.find(c=>c.id===id).nome,validade:"",obs:""}; S.empresa.docs.push(d); } d.certId=id; return d; }
+function editarValidade(id){ const c=CERTS.find(x=>x.id===id), d=docDaCert(id);
+  modal(`<h2>${esc(c.nome)}</h2><label>Válida até</label><input type="date" id="evData" value="${esc(d?.validade||"")}">${c.dias?`<div class="small muted" style="margin-top:6px">Normalmente vale ${c.dias} dias a partir da emissão.</div><button class="btn ghost sm" id="evHoje">Emiti hoje → validade de ${c.dias} dias</button>`:""}<div class="right"><button class="btn sec" onclick="fecharModal()">Cancelar</button><button class="btn" id="evOk">Salvar</button></div>`,m=>{
+    const h=m.querySelector("#evHoje"); if(h) h.onclick=()=>{ const x=new Date(); x.setDate(x.getDate()+c.dias); $("#evData").value=ymdL(x); };
+    m.querySelector("#evOk").onclick=()=>{ const doc=garantirDoc(id); doc.validade=$("#evData").value; salvar(); fecharModal(); render(); toast("Validade salva"); };
+  });
+}
+function renovarTudo(){
+  const uf=CERT_UF||S.empresa.dados?.uf||"PA", mun=S.empresa.dados?.municipio||"";
+  const pend=CERTS.filter(c=>["federal","fgts","cndt","estadual","municipal","falencia"].includes(c.id)).filter(c=>{ const [,d]=statusCert(docDaCert(c.id)); return d===null||d<=15; });
+  modal(`<h2>Renovar certidões</h2><p class="small muted">Toque em cada uma, emita no site oficial (o CNPJ já está copiado), baixe o PDF e volte. No fim, envie todos os PDFs de uma vez na Central.</p>${pend.map((c,i)=>`<a class="btn sec" style="width:100%;justify-content:space-between;margin-top:8px" href="${esc(c.url(uf,mun))}" target="_blank" rel="noopener" onclick="copiarCNPJCert();this.style.opacity=.5;this.querySelector('span').textContent='✓ aberto'"><b>${i+1}. ${esc(c.nome)}</b><span>abrir ↗</span></a>`).join("")}<div class="right"><button class="btn" onclick="fecharModal();document.getElementById('central')?.scrollIntoView({behavior:'smooth'})">Concluí — enviar PDFs</button></div>`);
+}
+function lerValidade(txt){
+  const t=txt.replace(/\s+/g," "); const datas=[]; const re=/(\d{2})[\/.](\d{2})[\/.](\d{4})/g;
+  const perto=[]; const kw=/v[aá]lid[ao]? at[eé]|validade|v[aá]lida at[eé] o dia|prazo de validade|v[aá]lido at[eé]/gi; let k;
+  while((k=kw.exec(t))){ const trecho=t.slice(k.index,k.index+140); let m; const r=new RegExp(re.source,"g"); while((m=r.exec(trecho))) perto.push(new Date(+m[3],+m[2]-1,+m[1])); }
+  let m; while((m=re.exec(t))) datas.push(new Date(+m[3],+m[2]-1,+m[1]));
+  const ok=a=>a.filter(d=>!isNaN(d)&&d.getFullYear()>2000&&d.getFullYear()<2100);
+  const p=ok(perto); if(p.length) return p.sort((a,b)=>b-a)[0];
+  const futuras=ok(datas).filter(d=>d>new Date()); return futuras.length?futuras.sort((a,b)=>b-a)[0]:null;
+}
+async function processarCertidoes(files){
+  const meu=soDig(S.empresa.cnpj); const res=[];
+  for(const f of files){
+    try{ const txt=await lerArquivo(f); const tipo=["federal","fgts","cndt","falencia","tcu","simples","cnpj","junta","municipal","estadual"].map(i=>CERTS.find(c=>c.id===i)).find(c=>c.det.test(txt));
+      const val=lerValidade(txt); const cnpjs=(txt.match(/\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}/g)||[]).map(soDig);
+      const outro=meu&&cnpjs.length&&!cnpjs.some(c=>c===meu||c.slice(0,8)===meu.slice(0,8));
+      if(tipo&&val){ const doc=garantirDoc(tipo.id); doc.validade=ymdL(val); doc.arquivo=f.name; doc.lidoEm=new Date().toISOString(); res.push(["ok",`<b>${esc(tipo.nome)}</b> — válida até <b>${fmtData(val)}</b>${outro?' <span class="chip bad">CNPJ diferente do seu!</span>':""}`]); }
+      else if(tipo){ res.push(["warn",`<b>${esc(tipo.nome)}</b> — não achei a validade no PDF. Use o 📅 para informar.`]); }
+      else res.push(["warn",`<b>${esc(f.name)}</b> — não reconheci o tipo de certidão${val?` (validade lida: ${fmtData(val)})`:""}. Informe pelo 📅 da certidão certa.`]);
+    }catch(e){ res.push(["bad",`<b>${esc(f.name)}</b> — não consegui ler o PDF.`]); }
+  }
+  salvar(); render();
+  modal(`<h2>Certidões lidas</h2>${res.map(([t,m])=>`<div class="flag ${t}"><div>${t==="ok"?"✅":t==="bad"?"⛔":"⚠️"}</div><div>${m}</div></div>`).join("")}<div class="small muted" style="margin-top:8px">Confira as datas: a leitura é automática e pode errar em PDFs fora do padrão.</div><div class="right"><button class="btn" onclick="fecharModal()">Ok</button></div>`);
+}
+function ligarCentral(){
+  const d=$("#dCert"), f=$("#fCert"); if(!d) return;
+  d.onclick=()=>f.click(); d.ondragover=e=>{e.preventDefault();}; d.ondrop=e=>{e.preventDefault();processarCertidoes([...e.dataTransfer.files]);};
+  f.onchange=()=>{ d.innerHTML='<span class="small">Lendo certidões…</span>'; processarCertidoes([...f.files]); };
+  const u=$("#certUf"); if(u) u.onchange=()=>{ CERT_UF=u.value; render(); setTimeout(()=>$("#central")?.scrollIntoView(),50); };
+}
+
 /* ================= PÁGINA: MINHA EMPRESA ================= */
-const DOCS_PADRAO=["CND Federal (Receita/PGFN)","CRF — FGTS","CNDT — Débitos Trabalhistas","Certidão Estadual","Certidão Municipal","Certidão de Falência e Recuperação Judicial","Contrato social consolidado","Balanço patrimonial (último exercício)","Certidão do conselho profissional (CREA/CRA etc.)","Alvará de funcionamento"];
+const DOCS_PADRAO=["Contrato social consolidado","Balanço patrimonial (último exercício)","Certidão do conselho profissional (CREA/CRA etc.)","Alvará de funcionamento"];
 function pgEmpresa(){
   const e=S.empresa, d=e.dados;
   return header("Minha empresa","Os dados da Receita Federal são carregados pelo CNPJ. O resto você completa uma vez e atualiza quando mudar.")+
@@ -698,9 +777,10 @@ function pgEmpresa(){
     </div>
     <p class="small muted">Dica: a maioria dos editais exige LG, SG e LC maiores que 1. Quando algum índice fica abaixo, costumam pedir capital ou PL mínimo de até 10% do valor estimado.</p>
   </div>
-  <div class="card"><h2>Documentos de habilitação <button class="btn sec sm" id="dPadrao">+ Lista padrão</button></h2>
+  ${centralCertidoesHTML()}
+  <div class="card"><h2>Outros documentos <button class="btn sec sm" id="dPadrao">+ Lista padrão</button></h2>
     <div class="tbl"><table><thead><tr><th>Documento</th><th style="width:150px">Validade</th><th>Obs.</th><th style="width:60px"></th></tr></thead><tbody>
-    ${e.docs.map(x=>{const dd=diasAte(x.validade);return `<tr><td><input data-doc="${x.id}" data-k="nome" value="${esc(x.nome)}"></td><td><input type="date" data-doc="${x.id}" data-k="validade" value="${esc(x.validade)}">${x.validade?`<div class="small" style="margin-top:4px">${dd<0?'<span class="chip bad">vencido</span>':dd<=20?`<span class="chip warn">${dd} dias</span>`:'<span class="chip ok">ok</span>'}</div>`:""}</td><td><input data-doc="${x.id}" data-k="obs" value="${esc(x.obs||"")}"></td><td><button class="btn ghost" onclick="delDoc('${x.id}')">✕</button></td></tr>`}).join("")||`<tr><td colspan="4" class="muted">Nenhum documento. Clique em "+ Lista padrão" ou adicione abaixo.</td></tr>`}
+    ${e.docs.filter(x=>!x.certId&&!CERTS.some(c=>semAcento(c.nome)===semAcento(x.nome))).map(x=>{const dd=diasAte(x.validade);return `<tr><td><input data-doc="${x.id}" data-k="nome" value="${esc(x.nome)}"></td><td><input type="date" data-doc="${x.id}" data-k="validade" value="${esc(x.validade)}">${x.validade?`<div class="small" style="margin-top:4px">${dd<0?'<span class="chip bad">vencido</span>':dd<=20?`<span class="chip warn">${dd} dias</span>`:'<span class="chip ok">ok</span>'}</div>`:""}</td><td><input data-doc="${x.id}" data-k="obs" value="${esc(x.obs||"")}"></td><td><button class="btn ghost" onclick="delDoc('${x.id}')">✕</button></td></tr>`}).join("")||`<tr><td colspan="4" class="muted">Contrato social, balanço, alvará, registros em conselho… Clique em "+ Lista padrão".</td></tr>`}
     </tbody></table></div>
     <div class="right"><button class="btn sec sm" id="dAdd">+ Adicionar documento</button></div>
   </div>
@@ -732,6 +812,7 @@ function blocoDadosEmpresa(d){
   </dl></div>`;
 }
 function posEmpresa(){
+  ligarCentral();
   const e=S.empresa;
   const cn=$("#eCnpj"); cn.addEventListener("input",()=>{ const v=soDig(cn.value).slice(0,14); cn.value=v.length===14?fmtCNPJ(v):v; });
   $("#eBuscar").onclick=async()=>{
@@ -1034,7 +1115,7 @@ function verDocGerado(lid,i){ const g=S.licitacoes.find(x=>x.id===lid).docsGerad
 let agMes=null;
 function eventosTodos(){
   const ev=[]; S.licitacoes.filter(l=>!["perdida","descartada"].includes(l.status)).forEach(l=>ev.push(...prazosLic(l)));
-  S.empresa.docs.filter(d=>d.validade).forEach(d=>ev.push({data:new Date(d.validade+"T12:00"),titulo:"Vence: "+d.nome,tipo:"doc",info:"Renove antes das próximas sessões"}));
+  S.empresa.docs.filter(d=>d.validade).forEach(d=>ev.push({data:parseD(d.validade),titulo:"Vence: "+d.nome,tipo:"doc",info:"Renove antes das próximas sessões"}));
   return ev.sort((a,b)=>a.data-b.data);
 }
 function pgAgenda(){
