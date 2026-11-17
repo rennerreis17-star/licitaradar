@@ -1,0 +1,23 @@
+name: Sonda PNCP (diagnóstico)
+on:
+  push:
+    branches: [main]
+    paths: ["scripts/sondar_pncp.sh"]
+  workflow_dispatch:
+    inputs:
+      cnpj:
+        description: "CNPJ para testar"
+        required: false
+permissions:
+  contents: write
+jobs:
+  sonda:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash scripts/sondar_pncp.sh "${{ github.event.inputs.cnpj }}"
+      - run: |
+          git config user.name "licitaradar-bot"; git config user.email "actions@users.noreply.github.com"
+          git add data/_sonda; git commit -m "sonda PNCP [skip ci]" || exit 0
+          git pull --rebase origin main || true; git push
