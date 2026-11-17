@@ -106,6 +106,27 @@ tr:last-child td{border-bottom:0}
 .pill-status{font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px}
 .stack>*+*{margin-top:16px}
 .hide{display:none!important}
+/* nav com nomes */
+.nav a .ns{display:none}
+.kanban{display:flex;gap:12px;overflow-x:auto;padding-bottom:12px;align-items:flex-start;scroll-snap-type:x proximity}
+.kcol{flex:0 0 260px;background:#eef2f8;border-radius:14px;padding:10px;scroll-snap-align:start}
+.khead{display:flex;justify-content:space-between;align-items:center;margin:2px 4px 10px}
+.klist{min-height:60px;display:flex;flex-direction:column;gap:8px}
+.kcard{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 11px;cursor:pointer;box-shadow:0 1px 2px rgba(15,27,45,.05)}
+.kcard:active{transform:scale(.98)}.kghost{opacity:.4}
+.ckrow{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);margin:0;font-weight:500;color:var(--ink);font-size:14px}
+.ckrow input{width:20px;height:20px;flex-shrink:0;accent-color:var(--accent)}.ckrow span{flex:1}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal-h{text-align:center;font-size:11px;font-weight:700;color:var(--muted);padding:4px 0}
+.cal-d{aspect-ratio:1;border-radius:10px;background:#f8fafc;border:1px solid var(--line);padding:4px;display:flex;flex-direction:column;justify-content:space-between;font-size:12.5px;font-weight:600;cursor:default}
+.cal-d.vazio{background:transparent;border:0}.cal-d.nutil{color:#a0aec0;background:#fbfcfe}.cal-d.hoje{border:2px solid var(--accent);color:var(--accent)}
+.cal-dots{display:flex;gap:2px;flex-wrap:wrap}.cal-dots i,i.lg{width:7px;height:7px;border-radius:50%;display:inline-block}
+.dot-imp{background:var(--warn)}.dot-ses{background:var(--blue)}.dot-rec{background:var(--bad)}.dot-con{background:#64748b}.dot-doc{background:#a855f7}
+.bar{height:8px;background:var(--chip);border-radius:9px;min-width:80px;overflow:hidden}.bar i{display:block;height:100%;background:var(--accent)}
+.platrow{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}.platrow>div{flex:1;min-width:150px}
+.progress i.indet{width:40%;animation:indet 1.2s ease-in-out infinite}
+@keyframes indet{0%{margin-left:-40%}100%{margin-left:100%}}
+
 .ob-bg{position:fixed;inset:0;z-index:95;background:radial-gradient(1200px 700px at 10% 110%,rgba(14,159,110,.35),transparent),linear-gradient(160deg,#0b1f3a,#12305a);display:grid;place-items:center;padding:16px;overflow:auto;animation:obIn .35s ease}
 .ob-card{background:#fff;border-radius:22px;padding:26px 22px;width:min(480px,100%);box-shadow:0 30px 80px rgba(0,0,0,.35);animation:obUp .4s ease}
 .logo-big{width:76px;height:76px;border-radius:22px;background:var(--accent);display:grid;place-items:center;margin:0 auto;box-shadow:0 10px 30px rgba(14,159,110,.45)}
@@ -120,7 +141,8 @@ tr:last-child td{border-bottom:0}
   .app{flex-direction:column}
   .side{width:auto;height:auto;position:sticky;top:0;z-index:20;flex-direction:row;align-items:center;padding:8px 10px;overflow-x:auto;gap:2px}
   .brand{padding:0 8px 0 2px}.brand small,.brand span.nm{display:none}
-  .nav{display:flex;gap:2px}.nav a{padding:8px 10px;font-size:13px}.nav a span{display:none}.nav a.on span{display:inline}
+  .nav{display:flex;gap:0}.nav a{flex-direction:column;gap:3px;padding:7px 8px 6px;font-size:10.5px;min-width:58px;box-shadow:none!important}.nav a .nl{display:none}.nav a .ns{display:block;font-weight:600;letter-spacing:.1px}.nav a.on{background:rgba(14,159,110,.22)}.nav a svg{width:20px;height:20px}
+  .kcol{flex-basis:78vw}
   .side .foot{display:none}
   main{padding:18px 14px 50px}
   .g3,.g2{grid-template-columns:1fr}
@@ -151,11 +173,13 @@ const STORE_KEY = "licitaradar_v1";
 
 /* ---------------- Estado ---------------- */
 const vazio = () => ({
-  empresa:{cnpj:"",dados:null,palavras:"",docs:[],atestados:[],fin:{pl:"",capital:"",lg:"",sg:"",lc:"",faturamento:""},registros:"",obs:""},
+  cfg:{apiKey:"",modelo:"claude-sonnet-5-5"},
+  empresa:{cnpj:"",dados:null,palavras:"",plataformas:{},docs:[],atestados:[],fin:{pl:"",capital:"",lg:"",sg:"",lc:"",faturamento:""},registros:"",obs:""},
   licitacoes:[], concorrentes:[], radar:{palavras:"",uf:"",mun:"",modalidade:"",dias:"30",vmin:"",ordem:"ader",paginas:"3",ultimos:[]}, intro:false
 });
 let S = vazio();
 try{ const raw = localStorage.getItem(STORE_KEY); if(raw) S = Object.assign(vazio(), JSON.parse(raw)); }catch(e){}
+S.cfg=S.cfg||{apiKey:"",modelo:"claude-sonnet-5-5"}; S.empresa.plataformas=S.empresa.plataformas||{}; S.radar=Object.assign(vazio().radar,S.radar||{});
 function salvar(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(S)); }catch(e){ toast("Não consegui salvar neste navegador — faça backup em Configurações."); } }
 
 let sampleFn = null;
@@ -516,8 +540,69 @@ ${docsConc}
 ${ata?`\nATA DA SESSÃO:\n"""\n${ata}\n"""`:""}`;
 }
 
+function promptEsclarecimento(edital, lic){
+  return `${REGRAS_GERAIS}
+
+TAREFA: PEDIDO DE ESCLARECIMENTO (art. 164 da Lei 14.133/2021 — até 3 dias úteis antes da abertura).
+Leia o edital, o termo de referência e os anexos e encontre:
+- Omissões (informação essencial que falta: quantitativos, local, horários, critérios de medição, prazos, forma de pagamento, convenção coletiva aplicável, regime de execução).
+- Contradições entre edital, termo de referência, planilhas e minuta de contrato.
+- Ambiguidades que podem levar a desclassificação ou inabilitação (exigências de habilitação pouco claras, documentos com nomes diferentes, momento de apresentação).
+- Pontos que afetam o preço e precisam ser confirmados antes de formular a proposta.
+Não transforme em pedido de esclarecimento o que é claramente ilegal — nesse caso, indique que o caminho é a impugnação.
+${lic?`\nLICITAÇÃO: ${lic.objeto} | Órgão: ${lic.orgao} | ${lic.municipio}/${lic.uf} | Valor estimado: ${brl(lic.valor)} | Sessão: ${fmtDataHora(lic.sessao||lic.encerramento)}\n`:""}
+${perfilEmpresaTexto()}
+
+FORMATO DA RESPOSTA (Markdown):
+## 1. Resumo (quantas dúvidas relevantes e o impacto delas)
+## 2. Prazo para enviar o pedido e canal indicado no edital
+## 3. Perguntas
+| # | Item do edital | Dúvida/contradição | Por que importa (preço, habilitação, execução) | Pergunta objetiva |
+## 4. Pontos que merecem impugnação, não esclarecimento
+## 5. Texto do pedido de esclarecimento
+Peça formal pronta para envio: endereçamento ao agente de contratação/pregoeiro, identificação da empresa [PREENCHER], referência ao edital, perguntas numeradas e objetivas, local, data, assinatura [PREENCHER].
+
+EDITAL (texto extraído):
+"""
+${edital}
+"""`;
+}
+function promptContrarrazoes(edital, recurso, nossos, lic){
+  return `${REGRAS_GERAIS}
+
+TAREFA: CONTRARRAZÕES A RECURSO ADMINISTRATIVO apresentado contra a MINHA EMPRESA (art. 165 da Lei 14.133/2021).
+1. Liste cada argumento do recurso, com o trecho correspondente.
+2. Para cada um, confronte com o edital e com os meus documentos/proposta: o argumento procede? É falha formal sanável por diligência (art. 64; TCU, Acórdão 1211/2021-Plenário)? É improcedente? Seja honesto: se o argumento for forte, diga e indique como mitigar.
+3. Identifique se o recurso é intempestivo, se a intenção de recorrer foi motivada na sessão e se traz fatos novos não discutidos na sessão.
+4. Fundamente com o edital, a lei e jurisprudência que você conheça com segurança (formalismo moderado, vantajosidade, vinculação ao edital, competitividade).
+${lic?`\nLICITAÇÃO: ${lic.objeto} | Órgão: ${lic.orgao} | ${lic.municipio}/${lic.uf}\n`:""}
+${perfilEmpresaTexto()}
+
+FORMATO DA RESPOSTA (Markdown):
+## 1. Resumo executivo (risco de a decisão ser revertida: baixo/médio/alto e por quê)
+## 2. Prazo para apresentar as contrarrazões
+## 3. Argumento por argumento
+| # | Alegação do recorrente | Avaliação (procede / sanável / improcedente) | Nossa resposta | Fundamento |
+## 4. Pontos de atenção (o que reforçar ou anexar)
+## 5. Minuta das CONTRARRAZÕES
+Peça completa: endereçamento, qualificação da recorrida [PREENCHER], tempestividade, síntese do recurso, preliminares (se houver), mérito item a item, pedidos (não conhecimento ou improvimento do recurso e manutenção da decisão), local, data, assinatura [PREENCHER].
+
+EDITAL (texto extraído):
+"""
+${edital}
+"""
+
+RECURSO APRESENTADO CONTRA A MINHA EMPRESA:
+"""
+${recurso}
+"""
+${nossos?`\nMINHA PROPOSTA / DOCUMENTOS QUESTIONADOS:\n"""\n${nossos}\n"""`:""}`;
+}
+
 /* ---------------- Navegação ---------------- */
 const ICONS={
+  agenda:'<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M8 14h2M14 14h2M8 18h2"/>',
+  mercado:'<path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/>',
   painel:'<path d="M3 13h8V3H3zM13 21h8V11h-8zM13 3v6h8V3zM3 21h8v-6H3z"/>',
   empresa:'<path d="M3 21h18M5 21V7l7-4 7 4v14M9 9h1M14 9h1M9 13h1M14 13h1M9 17h1M14 17h1"/>',
   radar:'<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>',
@@ -526,19 +611,22 @@ const ICONS={
   concorrentes:'<path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>',
   config:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/>'
 };
-const PAGINAS=[["painel","Painel"],["empresa","Minha empresa"],["radar","Radar PNCP"],["licitacoes","Minhas licitações"],["analise","Análise com IA"],["concorrentes","Concorrentes"],["config","Configurações"]];
+const PAGINAS=[["painel","Painel","Painel"],["radar","Radar PNCP","Radar"],["licitacoes","Minhas licitações","Licitações"],["agenda","Agenda de prazos","Agenda"],["analise","Análise com IA","IA"],["concorrentes","Concorrentes","Rivais"],["mercado","Mercado","Mercado"],["empresa","Minha empresa","Empresa"],["config","Ajustes","Ajustes"]];
+const OCULTAS=["detalhe"];
 let pagina = (location.hash||"").slice(1) || "painel";
-if(!PAGINAS.some(p=>p[0]===pagina)) pagina="painel";
+if(!PAGINAS.some(p=>p[0]===pagina)&&!OCULTAS.includes(pagina)) pagina="painel";
+if(pagina==="detalhe"&&!LIC_ID) pagina="licitacoes";
 function ir(p){ pagina=p; try{ history.replaceState(null,"","#"+p); }catch(e){ location.hash=p; } render(); window.scrollTo(0,0); }
-window.addEventListener("hashchange",()=>{ const p=location.hash.slice(1); if(PAGINAS.some(x=>x[0]===p) && p!==pagina){ pagina=p; render(); } });
+window.addEventListener("hashchange",()=>{ const p=location.hash.slice(1); if((PAGINAS.some(x=>x[0]===p)||(p==="detalhe"&&LIC_ID)) && p!==pagina){ pagina=p; render(); } });
 function renderNav(){
-  $("#nav").innerHTML=PAGINAS.map(([k,n])=>`<a class="${k===pagina?"on":""}" onclick="ir('${k}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[k]}</svg><span>${n}</span></a>`).join("");
+  const atual=pagina==="detalhe"?"licitacoes":pagina;
+  $("#nav").innerHTML=PAGINAS.map(([k,n,c])=>`<a class="${k===atual?"on":""}" onclick="ir('${k}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[k]}</svg><span class="nl">${n}</span><span class="ns">${c}</span></a>`).join("");
 }
 function render(){
   renderNav();
-  const fn={painel:pgPainel,empresa:pgEmpresa,radar:pgRadar,licitacoes:pgLicitacoes,analise:pgAnalise,concorrentes:pgConcorrentes,config:pgConfig}[pagina];
+  const fn={painel:pgPainel,empresa:pgEmpresa,radar:pgRadar,licitacoes:pgLicitacoes,detalhe:pgDetalhe,agenda:pgAgenda,analise:pgAnalise,concorrentes:pgConcorrentes,mercado:pgMercado,config:pgConfig}[pagina];
   $("#main").innerHTML=fn();
-  const after={painel:posPainel,empresa:posEmpresa,radar:posRadar,analise:posAnalise,concorrentes:posConcorrentes,config:posConfig}[pagina];
+  const after={painel:posPainel,empresa:posEmpresa,radar:posRadar,licitacoes:posLicitacoes,detalhe:posDetalhe,analise:posAnalise,concorrentes:posConcorrentes,mercado:posMercado,config:posConfig}[pagina];
   after&&after();
 }
 const header=(t,s,extra="")=>`<div class="top"><div><h1>${t}</h1><p>${s}</p></div><div class="row" style="flex:0 0 auto">${extra}</div></div>`;
@@ -616,6 +704,10 @@ function pgEmpresa(){
     </tbody></table></div>
     <div class="right"><button class="btn sec sm" id="dAdd">+ Adicionar documento</button></div>
   </div>
+  <div class="card"><h2>Cadastros nas plataformas de disputa</h2><p class="small muted" style="margin-top:-6px">Os lances acontecem nessas plataformas. Sem cadastro ativo, não dá para disputar.</p>
+    ${PLATAFORMAS.filter(p=>p[0]!=="outra").map(([k,n,u])=>{ const pl=e.plataformas[k]||{}; const dd=diasAte(pl.validade); return `<div class="platrow"><div style="min-width:0"><b>${n}</b> <a class="small" href="${u}" target="_blank" rel="noopener">abrir ↗</a>${pl.validade&&dd!==null&&dd<=20?`<div><span class="chip ${dd<0?"bad":"warn"}">${dd<0?"vencido":"vence em "+dd+" dias"}</span></div>`:""}</div><select data-pl="${k}" data-k="status" style="width:auto"><option value="">Não cadastrado</option><option value="ok" ${pl.status==="ok"?"selected":""}>✅ Cadastrado</option><option value="andamento" ${pl.status==="andamento"?"selected":""}>⏳ Em andamento</option></select><input type="date" data-pl="${k}" data-k="validade" value="${esc(pl.validade||"")}" title="Validade do cadastro" style="width:auto"></div>`; }).join("")}
+    <div class="small muted" style="margin-top:8px">Dica: no Compras.gov.br o cadastro é o SICAF; deixe o nível de habilitação atualizado para não depender de envio manual de certidões.</div>
+  </div>
   <div class="card"><h2>Atestados de capacidade técnica</h2>
     <div class="tbl"><table><thead><tr><th>Serviço/fornecimento atestado</th><th>Quantitativo</th><th>Emitente</th><th style="width:90px">Ano</th><th style="width:60px"></th></tr></thead><tbody>
     ${e.atestados.map(x=>`<tr><td><input data-at="${x.id}" data-k="descricao" value="${esc(x.descricao)}"></td><td><input data-at="${x.id}" data-k="quant" value="${esc(x.quant||"")}"></td><td><input data-at="${x.id}" data-k="emitente" value="${esc(x.emitente||"")}"></td><td><input data-at="${x.id}" data-k="ano" value="${esc(x.ano||"")}"></td><td><button class="btn ghost" onclick="delAt('${x.id}')">✕</button></td></tr>`).join("")||`<tr><td colspan="5" class="muted">Nenhum atestado cadastrado.</td></tr>`}
@@ -656,6 +748,7 @@ function posEmpresa(){
   document.querySelectorAll("[data-at]").forEach(i=>i.onchange=()=>{const x=e.atestados.find(d=>d.id===i.dataset.at); x[i.dataset.k]=i.value; salvar();});
   $("#dAdd").onclick=()=>{e.docs.push({id:uid(),nome:"",validade:"",obs:""});salvar();render();};
   $("#dPadrao").onclick=()=>{const ex=new Set(e.docs.map(d=>d.nome)); DOCS_PADRAO.forEach(n=>{if(!ex.has(n)) e.docs.push({id:uid(),nome:n,validade:"",obs:""});}); salvar(); render();};
+  document.querySelectorAll("[data-pl]").forEach(i=>i.onchange=()=>{ const k=i.dataset.pl; e.plataformas[k]=e.plataformas[k]||{}; e.plataformas[k][i.dataset.k]=i.value; salvar(); if(i.dataset.k==="validade") render(); });
   $("#aAdd").onclick=()=>{e.atestados.push({id:uid(),descricao:"",quant:"",emitente:"",ano:""});salvar();render();};
 }
 function manualEmpresaHTML(){ return `<div class="card" style="margin-top:10px;box-shadow:none"><h3 style="margin-top:0">Preencher manualmente</h3><div class="grid g2">
@@ -810,61 +903,199 @@ function novaLicitacaoManual(l){
   });
 }
 
+/* ================= DATAS / DIAS ÚTEIS ================= */
+function pascoa(y){ const a=y%19,b=Math.floor(y/100),c=y%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),mes=Math.floor((h+l-7*m+114)/31),dia=((h+l-7*m+114)%31)+1; return new Date(y,mes-1,dia); }
+const _fer={};
+function feriados(y){ if(_fer[y]) return _fer[y]; const s=new Set(["01-01","04-21","05-01","09-07","10-12","11-02","11-15","11-20","12-25"].map(x=>y+"-"+x)); const p=pascoa(y); [-48,-47,-2,60].forEach(n=>{ const d=new Date(p); d.setDate(d.getDate()+n); s.add(ymdL(d)); }); return _fer[y]=s; }
+function ymdL(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function ehUtil(d){ const w=d.getDay(); return w!==0 && w!==6 && !feriados(d.getFullYear()).has(ymdL(d)); }
+function somaUteis(data,n){ const d=new Date(data); if(isNaN(d)) return null; d.setHours(12,0,0,0); let c=0; const st=n<0?-1:1; while(c<Math.abs(n)){ d.setDate(d.getDate()+st); if(ehUtil(d)) c++; } return d; }
+function prazosLic(l){
+  const ev=[]; const ses=l.sessao||l.encerramento;
+  if(ses){ const d=new Date(ses); if(!isNaN(d)){
+    ev.push({data:somaUteis(d,-3),titulo:"Último dia p/ impugnar ou pedir esclarecimento",tipo:"imp",info:"art. 164 da Lei 14.133 — até 3 dias úteis antes da abertura"});
+    ev.push({data:d,titulo:"Sessão pública / disputa de lances",tipo:"ses",info:l.plataforma?("Plataforma: "+l.plataforma):""}); } }
+  if(l.resultadoData){ const r=somaUteis(l.resultadoData,3); ev.push({data:r,titulo:"Prazo das razões de recurso",tipo:"rec",info:"art. 165 — 3 dias úteis da intimação/ata (registre a intenção na sessão)"});
+    ev.push({data:somaUteis(r,3),titulo:"Prazo de contrarrazões (aprox.)",tipo:"con",info:"3 dias úteis após o fim do prazo do recorrente"}); }
+  return ev.filter(e=>e.data).map(e=>({...e,lic:l}));
+}
+const TIPO_EV={imp:["⚖️","warn"],ses:["🔨","blue"],rec:["📨","bad"],con:["🛡️",""],doc:["📄","warn"]};
+
 /* ================= PÁGINA: MINHAS LICITAÇÕES ================= */
-let filtroStatus="ativos";
+let filtroStatus="ativos", visaoLic="quadro";
+const COLS=["analise","pendencias","apta","participando","ganha","perdida","inapta","descartada"];
 function pgLicitacoes(){
   let L=S.licitacoes;
+  const topo=header("Minhas licitações","Arraste os cartões entre as etapas. Toque em um cartão para abrir datas, checklist e disputa.",`<div class="tabs" style="margin:0"><button class="${visaoLic==="quadro"?"on":""}" onclick="visaoLic='quadro';render()">▦ Quadro</button><button class="${visaoLic==="lista"?"on":""}" onclick="visaoLic='lista';render()">☰ Lista</button></div><button class="btn" onclick="novaLicitacaoManual()">+ Nova</button>`);
+  if(!L.length) return topo+`<div class="empty">Nada por aqui ainda. Use o <a href="#radar" onclick="ir('radar');return false">Radar</a> para salvar licitações ou cadastre manualmente.</div>`;
+  if(visaoLic==="quadro") return topo+`<div class="kanban">${COLS.map(k=>{ const it=L.filter(l=>(l.status||"analise")===k); const [n,c]=STATUS[k]; return `<div class="kcol"><div class="khead"><span class="chip ${c}">${n}</span><span class="small muted">${it.length}</span></div><div class="klist" data-st="${k}">${it.map(cardMini).join("")}</div></div>`; }).join("")}</div>`;
   if(filtroStatus==="ativos") L=L.filter(l=>!["ganha","perdida","descartada"].includes(l.status));
   else if(filtroStatus!=="todas") L=L.filter(l=>l.status===filtroStatus);
-  return header("Minhas licitações","Acompanhe cada licitação, o enquadramento e as análises feitas.",`<button class="btn" onclick="novaLicitacaoManual()">+ Nova</button>`)+
-  `<div class="tabs">${[["ativos","Em andamento"],["todas","Todas"],...Object.entries(STATUS).map(([k,[n]])=>[k,n])].map(([k,n])=>`<button class="${k===filtroStatus?"on":""}" onclick="filtroStatus='${k}';render()">${n}</button>`).join("")}</div>
-  ${L.length?`<div class="stack">${L.map(cardLicitacao).join("")}</div>`:`<div class="empty">Nada por aqui. Use o <a href="#radar" onclick="ir('radar');return false">Radar</a> ou cadastre manualmente.</div>`}`;
+  return topo+`<div class="tabs">${[["ativos","Em andamento"],["todas","Todas"],...Object.entries(STATUS).map(([k,[n]])=>[k,n])].map(([k,n])=>`<button class="${k===filtroStatus?"on":""}" onclick="filtroStatus='${k}';render()">${n}</button>`).join("")}</div>
+  ${L.length?`<div class="stack">${L.map(cardLicitacao).join("")}</div>`:`<div class="empty">Nenhuma licitação nesta etapa.</div>`}`;
 }
+function cardMini(l){
+  const ck=(l.checklist||[]); const feitos=ck.filter(x=>x.ok).length;
+  return `<div class="kcard" data-id="${l.id}" onclick="abrirDetalhe('${l.id}')"><div class="small" style="font-weight:700;line-height:1.35">${esc(limpaObj(l.objeto).slice(0,90))}${l.objeto.length>90?"…":""}</div><div class="small muted" style="margin-top:3px">${esc(l.municipio||"")}${l.uf?"/"+esc(l.uf):""} · ${l.valor?brl(l.valor):"—"}</div><div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px">${prazoChip(l.sessao||l.encerramento)}${ck.length?`<span class="chip ${feitos===ck.length?"ok":""}">☑ ${feitos}/${ck.length}</span>`:""}${l.analise?vereditoChip(l.analise.veredito):""}</div></div>`;
+}
+function posLicitacoes(){
+  if(visaoLic!=="quadro") return;
+  carregarScript("https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js").then(()=>{
+    document.querySelectorAll(".klist").forEach(el=>new window.Sortable(el,{group:"lic",animation:160,delay:180,delayOnTouchOnly:true,ghostClass:"kghost",onEnd:ev=>{ const id=ev.item.dataset.id, st=ev.to.dataset.st; const l=S.licitacoes.find(x=>x.id===id); if(l && l.status!==st){ l.status=st; salvar(); toast("Movida para: "+STATUS[st][0]); render(); } }}));
+  }).catch(()=>{});
+}
+const _scr={};
+function carregarScript(src){ return _scr[src]||(_scr[src]=new Promise((ok,err)=>{ const s=document.createElement("script"); s.src=src; s.onload=ok; s.onerror=err; document.head.appendChild(s); })); }
 function cardLicitacao(l){
-  const d=diasAte(l.encerramento), a=l.analise;
+  const d=diasAte(l.sessao||l.encerramento), a=l.analise;
   const req=a?.requisitos||[]; const nOk=req.filter(r=>r.status==="atende").length, nNo=req.filter(r=>r.status==="nao_atende").length, nV=req.filter(r=>r.status==="verificar").length;
-  return `<div class="card"><div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap"><div style="min-width:0;flex:1"><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">${stChip(l.status)}${l.modalidade?`<span class="chip">${esc(l.modalidade)}</span>`:""}${d!==null?`<span class="chip ${d<0?"":d<=3?"bad":d<=7?"warn":""}">${d<0?"encerrada":d===0?"hoje":"em "+d+" dias"} · ${fmtData(l.encerramento)}</span>`:""}</div>
-  <div style="font-weight:700">${esc(l.objeto)}</div><div class="small muted">${esc(l.orgao)} · ${esc(l.municipio)}/${esc(l.uf)} · ${brl(l.valor)}${l.link?` · <a href="${esc(l.link)}" target="_blank" rel="noopener">edital ↗</a>`:""}</div></div>
-  <div style="display:flex;gap:6px;align-items:flex-start;flex-wrap:wrap"><select onchange="mudaStatus('${l.id}',this.value)" style="width:auto">${Object.entries(STATUS).map(([k,[n]])=>`<option value="${k}" ${k===(l.status||"analise")?"selected":""}>${n}</option>`).join("")}</select></div></div>
-  ${a?`<div style="margin-top:12px;padding:12px;border-radius:12px;background:#f8fafc;border:1px solid var(--line)"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><b>Enquadramento:</b> ${vereditoChip(a.veredito)} <span class="chip ok">${nOk} atende</span> <span class="chip bad">${nNo} não atende</span> <span class="chip warn">${nV} verificar</span></div>${a.explicacao_veredito?`<div class="small" style="margin-top:6px">${esc(a.explicacao_veredito)}</div>`:""}</div>`:""}
-  <div class="right" style="justify-content:flex-start"><button class="btn sm" onclick="abrirAnalise('${l.id}','enquadramento')">${a?"Ver/refazer enquadramento":"Analisar enquadramento"}</button><button class="btn sec sm" onclick="abrirAnalise('${l.id}','impugnacao')">Impugnar edital</button><button class="btn sec sm" onclick="abrirAnalise('${l.id}','recurso')">Recurso contra concorrente</button><button class="btn ghost sm" onclick="editarNotas('${l.id}')">Notas${l.notas?" ●":""}</button><button class="btn ghost sm" onclick="novaLicitacaoManual(S.licitacoes.find(x=>x.id==='${l.id}'))">Editar</button><button class="btn ghost sm" onclick="confirmar('Excluir esta licitação?',()=>{S.licitacoes=S.licitacoes.filter(x=>x.id!=='${l.id}');salvar();render();})">Excluir</button></div></div>`;
+  return `<div class="card"><div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap"><div style="min-width:0;flex:1"><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">${stChip(l.status)}${l.modalidade?`<span class="chip">${esc(l.modalidade)}</span>`:""}${prazoChip(l.sessao||l.encerramento)}</div>
+  <div style="font-weight:700">${esc(limpaObj(l.objeto))}</div><div class="small muted">${esc(l.orgao)} · ${esc(l.municipio)}/${esc(l.uf)} · ${brl(l.valor)}</div></div></div>
+  ${a?`<div style="margin-top:12px;padding:12px;border-radius:12px;background:#f8fafc;border:1px solid var(--line)"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><b>Enquadramento:</b> ${vereditoChip(a.veredito)} <span class="chip ok">${nOk} atende</span> <span class="chip bad">${nNo} não atende</span> <span class="chip warn">${nV} verificar</span></div></div>`:""}
+  <div class="right" style="justify-content:flex-start"><button class="btn sm" onclick="abrirDetalhe('${l.id}')">Abrir</button><button class="btn sec sm" onclick="abrirAnalise('${l.id}','enquadramento')">✨ Enquadramento</button><button class="btn ghost sm" onclick="confirmar('Excluir esta licitação?',()=>{S.licitacoes=S.licitacoes.filter(x=>x.id!=='${l.id}');salvar();render();})">Excluir</button></div></div>`;
 }
-const vereditoChip=v=>({apta:'<span class="chip ok">APTA</span>',apta_com_pendencias:'<span class="chip warn">APTA COM PENDÊNCIAS</span>',inapta:'<span class="chip bad">INAPTA</span>'}[v]||'<span class="chip">INDEFINIDO</span>');
+const vereditoChip=v=>({apta:'<span class="chip ok">APTA</span>',apta_com_pendencias:'<span class="chip warn">PENDÊNCIAS</span>',inapta:'<span class="chip bad">INAPTA</span>'}[v]||'');
 function mudaStatus(id,v){ const l=S.licitacoes.find(x=>x.id===id); l.status=v; salvar(); toast("Status atualizado"); }
-function editarNotas(id){ const l=S.licitacoes.find(x=>x.id===id); modal(`<h2>Notas</h2><textarea id="nt" style="min-height:200px">${esc(l.notas||"")}</textarea><div class="right"><button class="btn" id="ntOk">Salvar</button></div>`,m=>m.querySelector("#ntOk").onclick=()=>{l.notas=$("#nt").value;salvar();fecharModal();render();}); }
 function abrirAnalise(id,modo){ AN.licId=id; AN.modo=modo; AN.resultado=null; ir("analise"); }
 
+/* ================= PÁGINA: DETALHE DA LICITAÇÃO ================= */
+var LIC_ID="";
+function abrirDetalhe(id){ LIC_ID=id; ir("detalhe"); }
+const PLATAFORMAS=[["comprasgov","Compras.gov.br (SICAF)","https://www.gov.br/compras/pt-br"],["bll","BLL Compras","https://bll.org.br"],["pcp","Portal de Compras Públicas","https://www.portaldecompraspublicas.com.br"],["licitanet","Licitanet","https://licitanet.com.br"],["bbmnet","BBMNET","https://bbmnet.com.br"],["licitacoese","Licitações-e (Banco do Brasil)","https://www.licitacoes-e.com.br"],["outra","Outra / portal próprio",""]];
+const CHECK_SESSAO=["Proposta cadastrada na plataforma antes do prazo","Valor final mínimo (piso) definido e conferido","Declarações exigidas anexadas","Certidões válidas na data da sessão","Login e certificado digital testados","Acompanhar o chat do pregoeiro durante a sessão","Documentos de habilitação prontos para envio rápido","Proposta ajustada ao lance final enviada no prazo"];
+function pgDetalhe(){
+  const l=S.licitacoes.find(x=>x.id===LIC_ID); if(!l) return header("Licitação","Não encontrada.")+`<button class="btn" onclick="ir('licitacoes')">Voltar</button>`;
+  const ev=prazosLic(l).sort((a,b)=>a.data-b.data); const ck=l.checklist||[]; const ds=l.disputa||{};
+  const plat=PLATAFORMAS.find(p=>p[0]===l.plataformaId);
+  return `<div class="top"><div style="min-width:0"><button class="btn ghost sm" onclick="ir('licitacoes')">← Minhas licitações</button><h1 style="margin-top:6px;font-size:20px">${esc(limpaObj(l.objeto))}</h1><p>${esc(l.orgao)} · ${esc(l.municipio)}/${esc(l.uf)} · ${brl(l.valor)}</p></div>
+  <div class="row" style="flex:0 0 auto"><select style="width:auto" onchange="mudaStatus('${l.id}',this.value)">${Object.entries(STATUS).map(([k,[n]])=>`<option value="${k}" ${k===(l.status||"analise")?"selected":""}>${n}</option>`).join("")}</select></div></div>
+  <div class="grid g2" style="align-items:start"><div class="stack">
+   <div class="card"><h2>📅 Datas e prazos</h2>
+    <div class="grid g2"><div><label>Data/hora da sessão</label><input type="datetime-local" id="dSes" value="${esc(String(l.sessao||l.encerramento||"").slice(0,16))}"></div>
+    <div><label>Plataforma da disputa</label><select id="dPlat"><option value="">—</option>${PLATAFORMAS.map(([k,n])=>`<option value="${k}" ${k===l.plataformaId?"selected":""}>${n}</option>`).join("")}</select></div>
+    <div><label>Data do resultado / ata (para prazo de recurso)</label><input type="date" id="dRes" value="${esc(l.resultadoData||"")}"></div>
+    <div><label>Nº do edital / processo</label><input id="dNum" value="${esc(l.numero||"")}"></div></div>
+    <div style="margin-top:12px">${ev.length?ev.map(e=>{const dd=diasAte(e.data);const [ic,c]=TIPO_EV[e.tipo];return `<div class="flag ${dd!==null&&dd<0?"":c==="bad"?"bad":c==="warn"?"warn":"info"}"><div>${ic}</div><div><b>${fmtData(e.data)}</b> ${dd!==null?`<span class="small muted">(${dd<0?"passou":dd===0?"hoje":"em "+dd+" dias"})</span>`:""} — ${esc(e.titulo)}<div class="small muted">${esc(e.info)}</div></div></div>`}).join(""):'<div class="muted small">Informe a data da sessão para calcular os prazos.</div>'}</div>
+    <div class="small muted">Prazos calculados em dias úteis com feriados nacionais. Confira feriados estaduais/municipais e o que o edital diz.</div>
+    <div class="right" style="justify-content:flex-start">${l.link?`<a class="btn sec sm" href="${esc(l.link)}" target="_blank" rel="noopener">Edital no PNCP ↗</a>`:""}${l.linkOrigem?`<a class="btn sec sm" href="${esc(l.linkOrigem)}" target="_blank" rel="noopener">Sistema de origem ↗</a>`:""}${plat&&plat[2]?`<a class="btn sec sm" href="${plat[2]}" target="_blank" rel="noopener">Abrir ${esc(plat[1])} ↗</a>`:""}<button class="btn ghost sm" onclick="exportarICS([S.licitacoes.find(x=>x.id==='${l.id}')])">📲 Pôr no calendário</button></div>
+   </div>
+   <div class="card"><h2>☑ Checklist <span class="small muted">${ck.filter(x=>x.ok).length}/${ck.length}</span></h2>
+    ${ck.length?ck.map(x=>`<label class="ckrow"><input type="checkbox" ${x.ok?"checked":""} onchange="togCk('${l.id}','${x.id}',this.checked)"><span style="${x.ok?"text-decoration:line-through;color:var(--muted)":""}">${esc(x.txt)}</span><button class="btn ghost sm" onclick="event.preventDefault();delCk('${l.id}','${x.id}')">✕</button></label>`).join(""):'<div class="muted small">Sem itens. Gere a partir do enquadramento da IA ou use o checklist padrão.</div>'}
+    <div class="row" style="margin-top:10px"><input id="ckNovo" placeholder="Novo item…"><button class="btn sec fit" onclick="addCk('${l.id}')">Adicionar</button></div>
+    <div class="right" style="justify-content:flex-start">${l.analise?`<button class="btn sec sm" onclick="gerarCk('${l.id}','ia')">✨ Gerar do enquadramento</button>`:""}<button class="btn sec sm" onclick="gerarCk('${l.id}','sessao')">+ Checklist do dia da sessão</button></div>
+   </div>
+   <div class="card"><h2>📝 Notas</h2><textarea id="dNotas" placeholder="Contatos, observações da sessão, preços dos concorrentes…">${esc(l.notas||"")}</textarea></div>
+  </div><div class="stack">
+   <div class="card"><h2>🔨 Preparar a disputa</h2>
+    <p class="small muted" style="margin-top:-6px">Calcule seu preço ideal e o <b>piso</b> (menor lance que ainda dá lucro). No Compras.gov.br, você pode deixar o piso configurado no robô público de lances.</p>
+    <div class="grid g2">${[["custo","Custo direto total (R$)"],["ind","Despesas indiretas (%)"],["trib","Tributos sobre o preço (%)"],["mar","Margem desejada (%)"],["marMin","Margem mínima aceitável (%)"],["qtd","Meses/quantidade (opcional)"]].map(([k,n])=>`<div><label>${n}</label><input data-ds="${k}" inputmode="decimal" value="${esc(ds[k]??"")}"></div>`).join("")}</div>
+    <div id="dsOut" style="margin-top:12px">${calcDisputaHTML(l)}</div>
+    <div class="flag info" style="margin-top:10px"><div>💡</div><div class="small">Durante a disputa: respeite o <b>intervalo mínimo entre lances</b> fixado no edital, não desça abaixo do piso e lembre que preço muito baixo pode ser desclassificado por inexequibilidade (art. 59). Em serviços com mão de obra, use a convenção coletiva atual na planilha.</div></div>
+   </div>
+   <div class="card"><h2>✨ IA para esta licitação</h2><div style="display:flex;flex-wrap:wrap;gap:6px">${MODOS_IA.map(([k,n])=>`<button class="btn sec sm" onclick="abrirAnalise('${l.id}','${k}')">${n.replace(/^\d · /,"")}</button>`).join("")}</div>
+    ${(l.docsGerados||[]).length?`<h3>Documentos gerados</h3>${l.docsGerados.map((g,i)=>`<div class="it" style="display:flex;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid var(--line)"><span class="small"><b>${esc((MODOS_IA.find(m=>m[0]===g.tipo)||[0,g.tipo])[1].replace(/^\d · /,""))}</b> · ${fmtDataHora(g.em)}</span><button class="btn ghost sm" onclick="verDocGerado('${l.id}',${i})">Ver</button></div>`).join("")}`:""}
+   </div>
+  </div></div>`;
+}
+function calcDisputa(l){
+  const ds=l.disputa||{}; const n=k=>+String(ds[k]??"").replace(/\./g,"").replace(",",".")||0;
+  const custo=n("custo"), ind=n("ind")/100, trib=n("trib")/100, mar=n("mar")/100, mmin=n("marMin")/100;
+  if(!custo) return null; const base=custo*(1+ind);
+  const ideal=(1-trib-mar)>0?base/(1-trib-mar):null, piso=(1-trib-mmin)>0?base/(1-trib-mmin):null;
+  return {base,ideal,piso,est:+l.valor||0};
+}
+function calcDisputaHTML(l){
+  const c=calcDisputa(l); if(!c) return '<div class="muted small">Preencha ao menos o custo direto.</div>';
+  const desc=v=>{ if(!c.est||!v) return ""; const pc=(1-v/c.est)*100; return ` <span class="small muted">(${Math.abs(pc).toFixed(1).replace(".",",")}% ${pc>=0?"abaixo":"acima"} do estimado)</span>`; };
+  const alerta=c.est&&c.piso&&c.piso>c.est?`<div class="flag bad"><div>⛔</div><div>Seu piso fica <b>acima do valor estimado</b> pelo órgão. Reveja custos ou avalie se vale participar.</div></div>`:"";
+  const inex=c.est&&c.piso&&c.piso<c.est*0.75?`<div class="flag warn"><div>⚠️</div><div>O piso está abaixo de 75% do estimado — em obras e serviços de engenharia isso é presumido inexequível (art. 59 §4º). Tenha a planilha pronta para justificar.</div></div>`:"";
+  return `<div class="grid g3"><div class="card kpi" style="box-shadow:none"><div class="lbl">Custo + indiretas</div><div class="val" style="font-size:18px">${brl(c.base)}</div></div><div class="card kpi" style="box-shadow:none;border-color:#bbf7d0"><div class="lbl">Preço ideal</div><div class="val" style="font-size:18px;color:var(--ok)">${c.ideal?brl(c.ideal):"—"}</div></div><div class="card kpi" style="box-shadow:none;border-color:#fecaca"><div class="lbl">Piso de lance</div><div class="val" style="font-size:18px;color:var(--bad)">${c.piso?brl(c.piso):"—"}</div></div></div>
+  <div class="small" style="margin-top:8px">Ideal${desc(c.ideal)} · Piso${desc(c.piso)}</div>${alerta}${inex}`;
+}
+function posDetalhe(){
+  const l=S.licitacoes.find(x=>x.id===LIC_ID); if(!l) return;
+  const ch=(id,fn)=>{ const e=$(id); if(e) e.onchange=()=>{ fn(e.value); salvar(); render(); }; };
+  ch("#dSes",v=>l.sessao=v); ch("#dRes",v=>l.resultadoData=v); ch("#dNum",v=>l.numero=v);
+  ch("#dPlat",v=>{ l.plataformaId=v; l.plataforma=(PLATAFORMAS.find(p=>p[0]===v)||[0,""])[1]; });
+  $("#dNotas").onchange=e=>{ l.notas=e.target.value; salvar(); toast("Notas salvas"); };
+  document.querySelectorAll("[data-ds]").forEach(i=>i.oninput=()=>{ l.disputa=l.disputa||{}; l.disputa[i.dataset.ds]=i.value; salvar(); $("#dsOut").innerHTML=calcDisputaHTML(l); });
+  const nv=$("#ckNovo"); if(nv) nv.onkeydown=e=>{ if(e.key==="Enter") addCk(l.id); };
+}
+function togCk(lid,cid,v){ const l=S.licitacoes.find(x=>x.id===lid); const c=l.checklist.find(x=>x.id===cid); c.ok=v; salvar(); render(); }
+function delCk(lid,cid){ const l=S.licitacoes.find(x=>x.id===lid); l.checklist=l.checklist.filter(x=>x.id!==cid); salvar(); render(); }
+function addCk(lid){ const t=$("#ckNovo").value.trim(); if(!t) return; const l=S.licitacoes.find(x=>x.id===lid); (l.checklist=l.checklist||[]).push({id:uid(),txt:t,ok:false}); salvar(); render(); }
+function gerarCk(lid,tipo){ const l=S.licitacoes.find(x=>x.id===lid); l.checklist=l.checklist||[]; const ex=new Set(l.checklist.map(x=>x.txt));
+  const itens=tipo==="ia"?(l.analise?.requisitos||[]).map(r=>`${r.status==="atende"?"":"⚠ "}${r.exigencia}${r.item_edital?" (item "+r.item_edital+")":""}`).concat((l.analise?.pendencias_prioritarias||[]).map(p=>"Pendência: "+p.acao)):CHECK_SESSAO;
+  const okIA=tipo==="ia"?new Set((l.analise?.requisitos||[]).filter(r=>r.status==="atende").map(r=>`${r.exigencia}${r.item_edital?" (item "+r.item_edital+")":""}`)):new Set();
+  itens.forEach(t=>{ if(t&&!ex.has(t)) l.checklist.push({id:uid(),txt:t,ok:okIA.has(t)}); }); salvar(); render(); toast("Checklist atualizado"); }
+function verDocGerado(lid,i){ const g=S.licitacoes.find(x=>x.id===lid).docsGerados[i]; modal(`<h2>Documento gerado</h2><div class="md out">${md(g.texto)}</div><div class="right"><button class="btn sec" onclick="copiar(S.licitacoes.find(x=>x.id==='${lid}').docsGerados[${i}].texto)">Copiar</button><button class="btn" onclick="fecharModal()">Fechar</button></div>`); }
+
+/* ================= PÁGINA: AGENDA ================= */
+let agMes=null;
+function eventosTodos(){
+  const ev=[]; S.licitacoes.filter(l=>!["perdida","descartada"].includes(l.status)).forEach(l=>ev.push(...prazosLic(l)));
+  S.empresa.docs.filter(d=>d.validade).forEach(d=>ev.push({data:new Date(d.validade+"T12:00"),titulo:"Vence: "+d.nome,tipo:"doc",info:"Renove antes das próximas sessões"}));
+  return ev.sort((a,b)=>a.data-b.data);
+}
+function pgAgenda(){
+  const ev=eventosTodos(); const hoje=new Date(); hoje.setHours(0,0,0,0);
+  if(!agMes) agMes=new Date(hoje.getFullYear(),hoje.getMonth(),1);
+  const y=agMes.getFullYear(), m=agMes.getMonth(); const ini=new Date(y,m,1), dow=ini.getDay(), dias=new Date(y,m+1,0).getDate();
+  const porDia={}; ev.forEach(e=>{ const k=ymdL(e.data); (porDia[k]=porDia[k]||[]).push(e); });
+  let cel=""; for(let i=0;i<dow;i++) cel+='<div class="cal-d vazio"></div>';
+  for(let d=1;d<=dias;d++){ const dt=new Date(y,m,d), k=ymdL(dt), es=porDia[k]||[]; const h=ymdL(hoje)===k;
+    cel+=`<div class="cal-d ${h?"hoje":""} ${ehUtil(dt)?"":"nutil"}" ${es.length?`onclick="document.getElementById('ev-${k}')?.scrollIntoView({behavior:'smooth',block:'center'})"`:""}><span>${d}</span><div class="cal-dots">${es.slice(0,4).map(e=>`<i class="dot-${e.tipo}"></i>`).join("")}</div></div>`; }
+  const prox=ev.filter(e=>e.data>=hoje).slice(0,40);
+  const mesNome=agMes.toLocaleDateString("pt-BR",{month:"long",year:"numeric"});
+  return header("Agenda de prazos","Impugnação, sessão, recurso e certidões — calculados em dias úteis.",`<button class="btn sec" onclick="exportarICS()">📲 Pôr tudo no calendário do celular</button>`)+
+  `<div class="grid g2" style="align-items:start"><div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><button class="btn ghost" onclick="agMes=new Date(agMes.getFullYear(),agMes.getMonth()-1,1);render()">‹</button><b style="text-transform:capitalize">${mesNome}</b><button class="btn ghost" onclick="agMes=new Date(agMes.getFullYear(),agMes.getMonth()+1,1);render()">›</button></div>
+   <div class="cal">${["D","S","T","Q","Q","S","S"].map(x=>`<div class="cal-h">${x}</div>`).join("")}${cel}</div>
+   <div class="small muted" style="margin-top:10px;display:flex;gap:12px;flex-wrap:wrap"><span><i class="dot-imp lg"></i> impugnação</span><span><i class="dot-ses lg"></i> sessão</span><span><i class="dot-rec lg"></i> recurso</span><span><i class="dot-doc lg"></i> certidão</span></div></div>
+  <div class="card"><h2>Próximos prazos</h2>${prox.length?prox.map(e=>{const dd=diasAte(e.data);const [ic,c]=TIPO_EV[e.tipo];return `<div class="flag ${c==="bad"?"bad":c==="warn"?"warn":"info"}" id="ev-${ymdL(e.data)}" ${e.lic?`style="cursor:pointer" onclick="abrirDetalhe('${e.lic.id}')"`:""}><div>${ic}</div><div><b>${fmtData(e.data)}</b> <span class="small muted">${dd===0?"hoje":dd===1?"amanhã":"em "+dd+" dias"}</span><div>${esc(e.titulo)}</div>${e.lic?`<div class="small muted">${esc(limpaObj(e.lic.objeto).slice(0,80))}</div>`:""}</div></div>`}).join(""):'<div class="empty">Sem prazos futuros. Salve licitações e informe a data da sessão.</div>'}</div></div>`;
+}
+function exportarICS(lics){
+  const ev=lics?lics.flatMap(prazosLic):eventosTodos(); if(!ev.length){ toast("Nenhum prazo para exportar"); return; }
+  const f=d=>ymdL(d).replace(/-/g,""); const e=s=>String(s||"").replace(/[,;\\]/g," ").replace(/\n/g," ");
+  const linhas=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//LicitaRadar//PT-BR","CALSCALE:GREGORIAN"];
+  ev.forEach((x,i)=>{ const d2=new Date(x.data); d2.setDate(d2.getDate()+1);
+    linhas.push("BEGIN:VEVENT","UID:lr-"+f(x.data)+"-"+i+"-"+(x.lic?x.lic.id:"doc")+"@licitaradar","DTSTAMP:"+f(new Date())+"T000000Z","DTSTART;VALUE=DATE:"+f(x.data),"DTEND;VALUE=DATE:"+f(d2),"SUMMARY:"+e(x.titulo),"DESCRIPTION:"+e((x.lic?limpaObj(x.lic.objeto).slice(0,150)+" — ":"")+x.info),"BEGIN:VALARM","TRIGGER:-P1D","ACTION:DISPLAY","DESCRIPTION:"+e(x.titulo),"END:VALARM","END:VEVENT"); });
+  linhas.push("END:VCALENDAR"); baixar("prazos-licitaradar.ics",linhas.join("\r\n"),"text/calendar");
+}
+
 /* ================= PÁGINA: ANÁLISE COM IA ================= */
+const MODOS_IA=[["enquadramento","1 · Enquadramento","Minha empresa atende ao edital? O que falta?"],["esclarecimento","2 · Esclarecimento","Dúvidas e contradições do edital + pedido formal"],["impugnacao","3 · Impugnar edital","Cláusulas ilegais ou restritivas + minuta"],["recurso","4 · Recurso","Falhas do concorrente + intenção e razões de recurso"],["contrarrazoes","5 · Contrarrazões","Recorreram contra você? Resposta pronta"]];
 const AN={modo:"enquadramento",licId:"",concId:"",edital:"",docs:"",ata:"",resultado:null,busy:false,prompt:""};
+const iaDisponivel=()=>!!(sampleFn || S.cfg?.apiKey);
 function pgAnalise(){
-  const modos=[["enquadramento","1 · Enquadramento","Minha empresa atende ao edital? O que falta?"],["impugnacao","2 · Impugnar edital","Cláusulas ilegais ou restritivas + minuta"],["recurso","3 · Recurso contra concorrente","Falhas na habilitação/proposta do concorrente + minuta"]];
-  const ia=!!sampleFn;
-  return header("Análise com IA","Envie o edital (PDF ou texto). A IA cruza com o perfil da sua empresa e com os documentos do concorrente.")+
-  `<div class="banner"><div>${ia?"✨":"📋"}</div><div>${ia?"<b>IA integrada ativa.</b> A análise roda aqui mesmo.":"<b>Modo prompt.</b> O painel monta o prompt completo (edital + dados da empresa + regras jurídicas). Clique em <b>Copiar prompt</b> e cole no Claude. A análise inteira vem pronta."} Revise sempre as minutas antes de protocolar.</div></div>
-  <div class="tabs">${modos.map(([k,n])=>`<button class="${k===AN.modo?"on":""}" onclick="AN.modo='${k}';AN.resultado=null;render()">${n}</button>`).join("")}</div>
+  const ia=iaDisponivel(); const mo=MODOS_IA.find(m=>m[0]===AN.modo);
+  const precisaDocs=AN.modo==="recurso"||AN.modo==="contrarrazoes";
+  return header("Análise com IA","Envie o edital (PDF ou texto). A IA cruza com o perfil da sua empresa e, quando for o caso, com os documentos do concorrente.")+
+  `<div class="banner"><div>${ia?"✨":"📋"}</div><div>${ia?"<b>IA integrada ativa.</b> A análise roda aqui mesmo.":"<b>Modo copiar e colar.</b> O painel monta o pedido completo; clique em <b>Copiar prompt</b> e cole no Claude. Para rodar aqui dentro, adicione sua chave em <a href='#config' onclick=\"ir('config');return false\">Ajustes</a>."} Revise sempre as minutas antes de protocolar.</div></div>
+  <div class="tabs">${MODOS_IA.map(([k,n])=>`<button class="${k===AN.modo?"on":""}" onclick="AN.modo='${k}';AN.resultado=null;render()">${n}</button>`).join("")}</div>
   <div class="grid g2" style="align-items:start">
-   <div class="card"><h2>${modos.find(m=>m[0]===AN.modo)[1]}</h2><p class="muted small" style="margin-top:-6px">${modos.find(m=>m[0]===AN.modo)[2]}</p>
-    <label>Licitação (opcional, mas recomendado)</label><select id="aLic"><option value="">— nenhuma —</option>${S.licitacoes.map(l=>`<option value="${l.id}" ${l.id===AN.licId?"selected":""}>${esc(l.objeto.slice(0,90))} · ${esc(l.orgao.slice(0,40))}</option>`).join("")}</select>
+   <div class="card"><h2>${mo[1]}</h2><p class="muted small" style="margin-top:-6px">${mo[2]}</p>
+    <label>Licitação (recomendado)</label><select id="aLic"><option value="">— nenhuma —</option>${S.licitacoes.map(l=>`<option value="${l.id}" ${l.id===AN.licId?"selected":""}>${esc(limpaObj(l.objeto).slice(0,80))} · ${esc(l.orgao.slice(0,30))}</option>`).join("")}</select>
     <label>Edital</label>
     <div class="drop" id="dEdital"><b>📄 Toque para enviar o PDF do edital</b><div class="small muted">ou cole o texto abaixo</div><input type="file" accept=".pdf,.txt,.md" class="hide" id="fEdital"></div>
-    <textarea id="tEdital" placeholder="Texto do edital (inclua o Termo de Referência)..." style="margin-top:8px;min-height:140px">${esc(AN.edital)}</textarea>
+    <textarea id="tEdital" placeholder="Texto do edital (inclua o Termo de Referência)..." style="margin-top:8px;min-height:120px">${esc(AN.edital)}</textarea>
     <div class="small muted" id="cEdital">${AN.edital?AN.edital.length.toLocaleString("pt-BR")+" caracteres":""}</div>
     ${AN.modo==="recurso"?`
       <label>Concorrente</label><select id="aConc"><option value="">— selecione (cadastre em Concorrentes) —</option>${S.concorrentes.map(c=>`<option value="${c.id}" ${c.id===AN.concId?"selected":""}>${esc(c.dados?.razao||fmtCNPJ(c.cnpj))}</option>`).join("")}</select>
-      <label>Documentos de habilitação e proposta do concorrente</label>
-      <div class="drop" id="dDocs"><b>📎 Enviar PDFs do concorrente</b><div class="small muted">pode selecionar vários</div><input type="file" accept=".pdf,.txt" multiple class="hide" id="fDocs"></div>
-      <textarea id="tDocs" placeholder="Ou cole aqui o texto dos documentos/proposta do concorrente..." style="margin-top:8px">${esc(AN.docs)}</textarea>
-      <label>Ata da sessão (opcional)</label><textarea id="tAta" style="min-height:70px" placeholder="Cole a ata, se tiver">${esc(AN.ata)}</textarea>`:""}
+      <label>Documentos de habilitação e proposta do concorrente</label>`:""}
+    ${AN.modo==="contrarrazoes"?`<label>Recurso apresentado contra a sua empresa</label>`:""}
+    ${precisaDocs?`<div class="drop" id="dDocs"><b>📎 Enviar PDFs</b><div class="small muted">pode selecionar vários</div><input type="file" accept=".pdf,.txt" multiple class="hide" id="fDocs"></div>
+      <textarea id="tDocs" placeholder="${AN.modo==="recurso"?"Ou cole o texto dos documentos/proposta do concorrente...":"Ou cole o texto do recurso..."}" style="margin-top:8px">${esc(AN.docs)}</textarea>
+      <label>${AN.modo==="recurso"?"Ata da sessão (opcional)":"Sua proposta/documentos questionados (opcional)"}</label><textarea id="tAta" style="min-height:70px">${esc(AN.ata)}</textarea>`:""}
     <div class="right">${ia?`<button class="btn" id="aRodar">✨ Analisar agora</button>`:""}<button class="btn ${ia?"sec":""}" id="aCopiar">📋 Copiar prompt</button></div>
-    ${!ia?`<p class="small muted">Depois de copiar, abra o <a href="https://claude.ai/new" target="_blank" rel="noopener">Claude ↗</a>, cole e envie. Se o edital for muito grande, você também pode anexar o PDF lá e colar só o prompt.</p>`:""}
+    ${!ia?`<p class="small muted">Depois de copiar, abra o <a href="https://claude.ai/new" target="_blank" rel="noopener">Claude ↗</a>, cole e envie.</p>`:""}
    </div>
    <div class="card" id="aOut">${resultadoHTML()}</div>
   </div>`;
 }
 function resultadoHTML(){
-  if(AN.busy) return `<h2>Analisando…</h2><div class="progress"><i style="width:60%;animation:none"></i></div><div class="md out" id="aStream" style="margin-top:12px;color:var(--muted)">A IA está lendo o edital. Isso pode levar 1–3 minutos em editais grandes.</div>`;
+  if(AN.busy) return `<h2>Analisando…</h2><div class="progress"><i class="indet"></i></div><div class="md out" id="aStream" style="margin-top:12px;color:var(--muted)">A IA está lendo o edital. Pode levar de 1 a 3 minutos em editais grandes.</div>`;
   const r=AN.resultado;
-  if(!r) return `<h2>Resultado</h2><div class="empty">O resultado aparece aqui.<br><span class="small">Enquadramento: checklist item a item. Impugnação/Recurso: análise + minuta pronta para revisão.</span></div>`;
+  if(!r) return `<h2>Resultado</h2><div class="empty">O resultado aparece aqui.<br><span class="small">Checklist, análise e minutas prontas para revisão.</span></div>`;
   if(r.tipo==="json"){ const a=r.valor; const req=a.requisitos||[];
     const ico={atende:"✅",nao_atende:"❌",verificar:"⚠️"};
     return `<h2>Enquadramento ${vereditoChip(a.veredito)}</h2>
@@ -874,9 +1105,9 @@ function resultadoHTML(){
     ${(a.pendencias_prioritarias||[]).length?`<h3>O que falta — prioridades</h3>${a.pendencias_prioritarias.map((p,i)=>`<div class="flag warn"><div>${i+1}</div><div><b>${esc(p.acao)}</b><div class="small">${esc(p.onde_como)} ${p.prazo?"· prazo: "+esc(p.prazo):""}</div></div></div>`).join("")}`:""}
     ${(a.clausulas_possivelmente_impugnaveis||[]).length?`<h3>Cláusulas possivelmente impugnáveis</h3>${a.clausulas_possivelmente_impugnaveis.map(c=>`<div class="flag info"><div>⚖️</div><div><b>${esc(c.item_edital)}</b> — ${esc(c.problema)} <span class="small muted">${esc(c.fundamento)}</span></div></div>`).join("")}<div class="right" style="justify-content:flex-start"><button class="btn sec sm" onclick="AN.modo='impugnacao';AN.resultado=null;render()">Gerar impugnação →</button></div>`:""}
     ${(a.riscos||[]).length?`<h3>Riscos</h3><ul>${a.riscos.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`:""}
-    <div class="right"><button class="btn sec sm" onclick="copiar(JSON.stringify(AN.resultado.valor,null,2))">Copiar JSON</button></div>`;
+    <div class="right">${AN.licId?`<button class="btn sm" onclick="gerarCk(AN.licId,'ia');abrirDetalhe(AN.licId)">☑ Criar checklist na licitação</button>`:""}<button class="btn sec sm" onclick="copiar(JSON.stringify(AN.resultado.valor,null,2))">Copiar JSON</button></div>`;
   }
-  return `<h2>${AN.modo==="impugnacao"?"Análise do edital e minuta de impugnação":AN.modo==="recurso"?"Análise do concorrente e minuta de recurso":"Resultado"}</h2>
+  return `<h2>${(MODOS_IA.find(m=>m[0]===AN.modo)||[0,"Resultado"])[1].replace(/^\d · /,"")}</h2>
   <div class="md out">${md(r.valor)}</div>
   <div class="right"><button class="btn sec sm" onclick="copiar(AN.resultado.valor)">Copiar texto</button><button class="btn sec sm" onclick="baixarWord()">Baixar Word (.doc)</button></div>`;
 }
@@ -888,8 +1119,7 @@ function ligarDrop(dropId,inputId,alvo,multi){
   d.ondrop=e=>{e.preventDefault();processa([...e.dataTransfer.files]);};
   f.onchange=()=>processa([...f.files]);
   async function processa(files){
-    if(!files.length) return;
-    let acc="";
+    if(!files.length) return; coletarAnalise(); let acc="";
     for(const file of files){
       d.innerHTML=`<span class="small">Lendo <b>${esc(file.name)}</b>…</span>`;
       try{ const t=await lerArquivo(file,(p,n)=>{d.innerHTML=`<span class="small">Lendo <b>${esc(file.name)}</b> — página ${p}/${n}</span>`;}); acc+=(multi?`\n\n===== ${file.name} =====\n`:"")+t; }
@@ -899,42 +1129,109 @@ function ligarDrop(dropId,inputId,alvo,multi){
   }
 }
 function coletarAnalise(){
-  AN.licId=$("#aLic").value; AN.edital=$("#tEdital").value;
+  if($("#aLic")) AN.licId=$("#aLic").value; if($("#tEdital")) AN.edital=$("#tEdital").value;
   if($("#tDocs")) AN.docs=$("#tDocs").value; if($("#tAta")) AN.ata=$("#tAta").value; if($("#aConc")) AN.concId=$("#aConc").value;
 }
 function montarPrompt(json){
   const lic=S.licitacoes.find(l=>l.id===AN.licId), conc=S.concorrentes.find(c=>c.id===AN.concId);
-  const lim=s=>s.length>180000?s.slice(0,180000)+"\n[... texto truncado por tamanho ...]":s;
+  const lim=(s,n=180000)=>s.length>n?s.slice(0,n)+"\n[... texto truncado por tamanho ...]":s;
   if(AN.modo==="enquadramento") return promptEnquadramento(lim(AN.edital),lic,json);
+  if(AN.modo==="esclarecimento") return promptEsclarecimento(lim(AN.edital),lic);
   if(AN.modo==="impugnacao") return promptImpugnacao(lim(AN.edital),lic);
-  return promptRecurso(lim(AN.edital).slice(0,120000),lim(AN.docs).slice(0,100000),conc,lic,AN.ata);
+  if(AN.modo==="contrarrazoes") return promptContrarrazoes(lim(AN.edital,120000),lim(AN.docs,60000),lim(AN.ata,40000),lic);
+  return promptRecurso(lim(AN.edital,120000),lim(AN.docs,100000),conc,lic,AN.ata);
+}
+function validaAnalise(){
+  if(!AN.edital.trim()){toast("Envie ou cole o edital primeiro");return false;}
+  if(AN.modo==="recurso"&&!AN.docs.trim()){toast("Inclua os documentos do concorrente");return false;}
+  if(AN.modo==="contrarrazoes"&&!AN.docs.trim()){toast("Inclua o texto do recurso apresentado");return false;}
+  return true;
 }
 function posAnalise(){
   ligarDrop("#dEdital","#fEdital","edital",false);
   ligarDrop("#dDocs","#fDocs","docs",true);
   $("#tEdital").oninput=e=>{AN.edital=e.target.value;$("#cEdital").textContent=AN.edital.length.toLocaleString("pt-BR")+" caracteres";};
   ["#aLic","#aConc","#tDocs","#tAta"].forEach(s=>{const el=$(s); if(el) el.onchange=coletarAnalise;});
-  $("#aCopiar").onclick=()=>{ coletarAnalise(); if(!AN.edital.trim()){toast("Envie ou cole o edital primeiro");return;} if(AN.modo==="recurso"&&!AN.docs.trim()){toast("Inclua os documentos do concorrente");return;} copiar(montarPrompt(false)); };
+  $("#aCopiar").onclick=()=>{ coletarAnalise(); if(validaAnalise()) copiar(montarPrompt(false)); };
   const rb=$("#aRodar"); if(rb) rb.onclick=rodarIA;
 }
+async function iaChamar(prompt,onText){
+  if(sampleFn){ const r=await sampleFn(prompt,{modelTier:"complex",onText}); return {text:r.text||"",truncated:r.truncated}; }
+  const key=S.cfg?.apiKey; if(!key) throw new Error("sem chave");
+  const resp=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"content-type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:S.cfg.modelo||"claude-sonnet-5-5",max_tokens:16000,stream:true,messages:[{role:"user",content:prompt}]})});
+  if(!resp.ok){ let m="HTTP "+resp.status; try{ const j=await resp.json(); m=j.error?.message||m; }catch(e){} throw new Error(m); }
+  const rd=resp.body.getReader(), dec=new TextDecoder(); let buf="", text="", stop="";
+  while(true){ const {value,done}=await rd.read(); if(done) break; buf+=dec.decode(value,{stream:true}); let i;
+    while((i=buf.indexOf("\n"))>=0){ const ln=buf.slice(0,i).trim(); buf=buf.slice(i+1); if(!ln.startsWith("data:")) continue; try{ const j=JSON.parse(ln.slice(5)); if(j.type==="content_block_delta"&&j.delta?.text){ text+=j.delta.text; onText&&onText({text}); } if(j.type==="message_delta") stop=j.delta?.stop_reason||stop; }catch(e){} } }
+  return {text,truncated:stop==="max_tokens"};
+}
 async function rodarIA(){
-  coletarAnalise();
-  if(!AN.edital.trim()){toast("Envie ou cole o edital primeiro");return;}
-  if(AN.modo==="recurso"&&!AN.docs.trim()){toast("Inclua os documentos do concorrente");return;}
+  coletarAnalise(); if(!validaAnalise()) return;
   AN.busy=true; AN.resultado=null; render();
   const json=AN.modo==="enquadramento";
   try{
-    const res=await sampleFn(montarPrompt(json),{modelTier:"complex",onText:({text})=>{const el=$("#aStream"); if(el && !json){ el.style.color=""; el.innerHTML=md(text);} else if(el){ el.textContent="Montando o checklist… ("+text.length+" caracteres)"; }}});
+    const res=await iaChamar(montarPrompt(json),({text})=>{const el=$("#aStream"); if(el && !json){ el.style.color=""; el.innerHTML=md(text);} else if(el){ el.textContent="Montando o checklist… ("+text.length+" caracteres)"; }});
     let txt=res.text||"";
     if(json){ let v=null; try{ v=JSON.parse(txt.slice(txt.indexOf("{"),txt.lastIndexOf("}")+1)); }catch(e){}
       if(v){ AN.resultado={tipo:"json",valor:v}; const l=S.licitacoes.find(x=>x.id===AN.licId); if(l){ l.analise=v; if(l.status==="analise"||!l.status) l.status={apta:"apta",apta_com_pendencias:"pendencias",inapta:"inapta"}[v.veredito]||l.status; salvar(); } }
       else AN.resultado={tipo:"md",valor:txt};
     } else { AN.resultado={tipo:"md",valor:txt}; const l=S.licitacoes.find(x=>x.id===AN.licId); if(l){ (l.docsGerados=l.docsGerados||[]).push({tipo:AN.modo,em:new Date().toISOString(),texto:txt.slice(0,60000)}); salvar(); } }
-    if(res.truncated) toast("A resposta foi cortada por tamanho — peça novamente ou use o modo prompt.");
+    if(res.truncated) toast("A resposta foi cortada por tamanho — peça novamente ou use Copiar prompt.");
   }catch(e){
-    AN.resultado={tipo:"md",valor:`**Não foi possível concluir a análise aqui** (${e.code||""} ${e.message||e}).\n\nUse o botão **Copiar prompt** e cole no Claude.`};
+    AN.resultado={tipo:"md",valor:`**Não foi possível concluir a análise aqui** (${e.code||""} ${e.message||e}).\n\nConfira sua chave em Ajustes ou use o botão **Copiar prompt** e cole no Claude.`};
   }
   AN.busy=false; render();
+}
+
+/* ================= PÁGINA: MERCADO (contratos PNCP) ================= */
+let META_C=null; const cacheC={};
+async function metaContratos(){ if(META_C!==null) return META_C; try{ const r=await fetch("data/contratos/meta.json",{cache:"no-store"}); if(!r.ok) throw 0; META_C=await r.json(); }catch(e){ META_C=false; } return META_C; }
+async function contratosUF(uf){ if(cacheC[uf]) return cacheC[uf]; try{ const r=await fetch(`data/contratos/${uf}.json`,{cache:"no-cache"}); if(!r.ok) return cacheC[uf]=[]; return cacheC[uf]=await r.json(); }catch(e){ return []; } }
+const MK={uf:"",pal:"",dias:"90",aba:"ranking"};
+function pgMercado(){
+  if(!MK.uf) MK.uf=S.radar.uf||S.empresa.dados?.uf||""; if(!MK.pal) MK.pal=S.empresa.palavras||S.radar.palavras||"";
+  return header("Mercado","Quem está ganhando contratos na sua área e por quanto — dados públicos de contratos do PNCP.")+
+  `<div class="card"><div class="grid g4"><div style="grid-column:span 2"><label>Área (palavras-chave)</label><input id="mkPal" value="${esc(MK.pal)}" placeholder="ex.: limpeza, conservação"></div>
+   <div><label>Estado</label><select id="mkUf">${UFS.map(u=>`<option ${u===MK.uf?"selected":""}>${u}</option>`).join("")}</select></div>
+   <div><label>Período</label><select id="mkDias">${[["30","30 dias"],["90","90 dias"],["180","180 dias"]].map(([k,n])=>`<option value="${k}" ${k===MK.dias?"selected":""}>${n}</option>`).join("")}</select></div></div>
+   <div id="mkInfo" class="small muted" style="margin-top:10px"></div></div>
+  <div class="tabs" style="margin-top:16px"><button class="${MK.aba==="ranking"?"on":""}" onclick="MK.aba='ranking';render()">🏆 Quem ganha</button><button class="${MK.aba==="precos"?"on":""}" onclick="MK.aba='precos';render()">💲 Banco de preços</button></div>
+  <div id="mkRes"><div class="empty">Carregando…</div></div>`;
+}
+function filtraContratos(lista){
+  const termos=MK.pal.split(",").map(s=>semAcento(s).trim()).filter(Boolean); const pos=termos.filter(k=>!k.startsWith("-")), neg=termos.filter(k=>k.startsWith("-")).map(k=>k.slice(1));
+  const lim=new Date(Date.now()-(+MK.dias)*864e5).toISOString().slice(0,10);
+  return lista.filter(c=>{ if((c.d||"")<lim) return false; const o=semAcento(c.o); if(neg.some(k=>o.includes(k))) return false; return !pos.length||pos.some(k=>o.includes(k)); });
+}
+async function posMercado(){
+  const go=async()=>{ MK.pal=$("#mkPal").value; MK.uf=$("#mkUf").value; MK.dias=$("#mkDias").value;
+    const meta=await metaContratos(); const box=$("#mkRes"); if(!box) return;
+    if(!meta||!meta.total){ $("#mkInfo").textContent=""; box.innerHTML=`<div class="empty">📦 A base de contratos ainda está sendo montada pelo robô.<br><span class="small">Ela cresce a cada coleta (3× ao dia). Volte mais tarde.</span></div>`; return; }
+    const todos=await contratosUF(MK.uf); const fil=filtraContratos(todos);
+    $("#mkInfo").innerHTML=`Base de contratos: ${meta.total.toLocaleString("pt-BR")} no Brasil · dias cobertos: ${meta.dias_cobertos||"?"} · atualizada em ${fmtDataHora(meta.atualizado)} · ${todos.length.toLocaleString("pt-BR")} em ${esc(MK.uf)} · <b>${fil.length}</b> na sua área`;
+    if(!fil.length){ box.innerHTML=`<div class="empty">Nenhum contrato encontrado com essas palavras em ${esc(MK.uf)} no período.</div>`; return; }
+    const meu=S.empresa.cnpj;
+    if(MK.aba==="ranking"){
+      const g={}; fil.forEach(c=>{ const k=c.f; const x=g[k]=g[k]||{f:c.f,fn:c.fn,n:0,v:0,orgs:new Set(),cid:new Set()}; x.n++; x.v+=+c.v||0; x.orgs.add(c.g); x.cid.add(c.m); });
+      const rk=Object.values(g).sort((a,b)=>b.v-a.v).slice(0,50); const tot=rk.reduce((s,x)=>s+x.v,0)||1;
+      box.innerHTML=`<div class="card"><h2>🏆 Empresas que mais ganham em ${esc(MK.uf)}</h2><div class="tbl"><table><thead><tr><th>#</th><th>Empresa</th><th>Contratos</th><th>Valor total</th><th>Participação</th><th></th></tr></thead><tbody>${rk.map((x,i)=>`<tr ${x.f===meu?'style="background:#f0fdf4"':""}><td>${i+1}</td><td><b>${esc(x.fn)}</b>${x.f===meu?' <span class="chip ok">você</span>':""}<div class="small muted">${fmtCNPJ(x.f)} · ${x.orgs.size} órgão(s) · ${[...x.cid].slice(0,3).map(esc).join(", ")}</div></td><td>${x.n}</td><td style="white-space:nowrap">${brl(x.v)}</td><td><div class="bar"><i style="width:${Math.max(2,x.v/tot*100)}%"></i></div></td><td>${x.f!==meu&&!S.concorrentes.some(c=>c.cnpj===x.f)?`<button class="btn sec sm" onclick="addConcMercado('${x.f}')">+ Concorrente</button>`:""}</td></tr>`).join("")}</tbody></table></div></div>`;
+    } else {
+      const vs=fil.map(c=>+c.v||0).filter(v=>v>0).sort((a,b)=>a-b); const med=vs.length?vs[Math.floor(vs.length/2)]:0, mean=vs.reduce((s,v)=>s+v,0)/(vs.length||1);
+      box.innerHTML=`<div class="grid g4" style="margin-bottom:14px">${[["Contratos",fil.length],["Mediana",brl(med)],["Média",brl(mean)],["Menor / maior",vs.length?brl(vs[0])+" / "+brl(vs[vs.length-1]):"—"]].map(([a,b])=>`<div class="card kpi"><div class="lbl">${a}</div><div class="val" style="font-size:18px">${b}</div></div>`).join("")}</div>
+      <div class="card"><h2>💲 Contratos parecidos (mais recentes)</h2><div class="small muted" style="margin-top:-6px;margin-bottom:8px">Use como referência de preço. O valor é do contrato inteiro — compare objeto, quantidade e prazo antes de concluir.</div><div class="list">${fil.sort((a,b)=>(b.d||"").localeCompare(a.d||"")).slice(0,80).map(c=>`<div class="it"><div style="min-width:0"><div class="t small">${esc(limpaObj(c.o).slice(0,180))}</div><div class="small muted">${esc(c.g)} · ${esc(c.m)} · ${fmtData(c.d)} · ${esc(c.fn)}</div></div><div style="font-weight:800;white-space:nowrap">${brl(c.v)}</div></div>`).join("")}</div></div>`;
+    }
+  };
+  ["#mkUf","#mkDias"].forEach(s=>$(s).onchange=go); let t; $("#mkPal").oninput=()=>{ clearTimeout(t); t=setTimeout(go,400); };
+  go();
+}
+async function addConcMercado(cnpj){ if(S.concorrentes.some(c=>c.cnpj===cnpj)) return; let dados=null; toast("Consultando CNPJ…"); try{ dados=await consultarCNPJ(cnpj); }catch(e){} S.concorrentes.unshift({id:uid(),cnpj,dados,licId:"",notas:"",criadoEm:new Date().toISOString()}); salvar(); toast("Adicionado em Concorrentes ✔"); render(); }
+async function historicoConc(cnpj){
+  modal(`<h2>📜 Contratos na base do PNCP</h2><div id="hcBox" class="small muted">Procurando em todos os estados…</div><div class="right"><button class="btn" onclick="fecharModal()">Fechar</button></div>`);
+  const meta=await metaContratos(); const box=$("#hcBox"); if(!meta||!meta.total){ box.innerHTML="A base de contratos ainda está sendo montada pelo robô. Tente mais tarde."; return; }
+  let ach=[]; const ufs=Object.keys(meta.por_uf||{}); for(let i=0;i<ufs.length;i++){ if(!$("#hcBox")) return; box.textContent=`Procurando… ${ufs[i]} (${i+1}/${ufs.length})`; const l=await contratosUF(ufs[i]); ach=ach.concat(l.filter(c=>c.f===cnpj)); }
+  if(!$("#hcBox")) return;
+  ach.sort((a,b)=>(b.d||"").localeCompare(a.d||""));
+  box.innerHTML=ach.length?`<div class="flag info"><div>📊</div><div><b>${ach.length}</b> contrato(s) · total <b>${brl(ach.reduce((s,c)=>s+(+c.v||0),0))}</b> · ${new Set(ach.map(c=>c.u)).size} estado(s)</div></div><div class="list">${ach.slice(0,100).map(c=>`<div class="it"><div style="min-width:0"><div class="t small">${esc(limpaObj(c.o).slice(0,160))}</div><div class="small muted">${esc(c.g)} · ${esc(c.m)}/${esc(c.u)} · ${fmtData(c.d)}</div></div><b style="white-space:nowrap">${brl(c.v)}</b></div>`).join("")}</div>`:`Nenhum contrato deste CNPJ nos ${meta.dias_cobertos||"últimos"} dias cobertos pela base.`;
 }
 
 /* ================= PÁGINA: CONCORRENTES ================= */
@@ -951,7 +1248,7 @@ function cardConc(c){
   const cn=c.cnpj;
   const links=[["Certidão consolidada TCU (CEIS, CNEP, inidôneos, CNJ)","https://certidoes-apf.apps.tcu.gov.br/"],["CEIS — Portal da Transparência","https://portaldatransparencia.gov.br/sancoes/ceis"],["CNEP — Portal da Transparência","https://portaldatransparencia.gov.br/sancoes/cnep"],["CND Federal (Receita)","https://solucoes.receita.fazenda.gov.br/Servicos/certidaointernet/PJ/Emitir"],["CRF FGTS (Caixa)","https://consulta-crf.caixa.gov.br/consultacrf/pages/consultaEmpregador.jsf"],["CNDT (TST)","https://cndt-certidao.tst.jus.br/inicio.faces"],["Contratos no PNCP","https://pncp.gov.br/app/contratos?q="+cn]];
   return `<div class="card"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><div><div style="font-weight:800;font-size:16px">${esc(d?.razao||"(sem dados)")}</div><div class="small muted">CNPJ ${fmtCNPJ(cn)}${lic?` · Licitação: ${esc(lic.objeto.slice(0,60))}…`:""}</div></div>
-  <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn sm" onclick="AN.modo='recurso';AN.concId='${c.id}';AN.licId='${c.licId||""}';AN.resultado=null;ir('analise')">Analisar p/ recurso</button><button class="btn sec sm" onclick="reconsultar('${c.id}')">Atualizar</button><button class="btn ghost sm" onclick="notasConc('${c.id}')">Notas</button><button class="btn ghost sm" onclick="confirmar('Remover concorrente?',()=>{S.concorrentes=S.concorrentes.filter(x=>x.id!=='${c.id}');salvar();render();})">Remover</button></div></div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn sm" onclick="AN.modo='recurso';AN.concId='${c.id}';AN.licId='${c.licId||""}';AN.resultado=null;ir('analise')">Analisar p/ recurso</button><button class="btn sec sm" onclick="historicoConc('${c.cnpj}')">📜 Contratos</button><button class="btn sec sm" onclick="reconsultar('${c.id}')">Atualizar</button><button class="btn ghost sm" onclick="notasConc('${c.id}')">Notas</button><button class="btn ghost sm" onclick="confirmar('Remover concorrente?',()=>{S.concorrentes=S.concorrentes.filter(x=>x.id!=='${c.id}');salvar();render();})">Remover</button></div></div>
   <div class="grid g2" style="margin-top:12px"><div>${fl.map(([t,m])=>`<div class="flag ${t}"><div>${{bad:"⛔",warn:"⚠️",ok:"✅",info:"ℹ️"}[t]}</div><div>${m}</div></div>`).join("")||'<div class="muted small">Sem dados para análise.</div>'}</div>
   <div>${d?`<details><summary class="small" style="cursor:pointer;font-weight:600">Dados completos da Receita</summary>${blocoDadosEmpresa(d)}</details>`:""}<h3>Verificações externas</h3><div class="small">${links.map(([n,u])=>`<div><a href="${u}" target="_blank" rel="noopener">${n} ↗</a></div>`).join("")}</div><div class="small muted" style="margin-top:6px">Tenha o CNPJ ${fmtCNPJ(cn)} à mão. <button class="btn ghost sm" onclick="copiar('${cn}')">copiar CNPJ</button></div>${c.notas?`<div class="flag info" style="margin-top:8px"><div>📝</div><div class="small">${esc(c.notas)}</div></div>`:""}</div></div></div>`;
 }
@@ -1042,11 +1339,17 @@ function pgConfig(){
    <dt>Licitações</dt><dd>PNCP — API pública de consultas (pncp.gov.br/api/consulta)</dd>
    <dt>IA</dt><dd>${sampleFn?"Integrada (Claude)":"Modo prompt (copiar e colar no Claude)"}</dd>
    <dt>Base legal</dt><dd>Lei 14.133/2021 · LC 123/2006 · jurisprudência do TCU</dd></dl>
+   <h3>Inteligência artificial dentro do site</h3>
+   <p class="small muted">Para a análise rodar aqui (sem copiar e colar), cole uma chave da API da Anthropic. Ela fica salva só neste navegador. O uso é cobrado pela Anthropic na sua conta — normalmente centavos a poucos reais por edital. Não use em computador compartilhado.</p>
+   <div class="row"><div><label>Chave da API</label><input id="cfgKey" type="password" placeholder="sk-ant-..." value="${esc(S.cfg.apiKey||"")}"></div><div><label>Modelo</label><select id="cfgMod">${[["claude-sonnet-5-5","Sonnet (recomendado)"],["claude-opus-5-5","Opus (mais profundo, mais caro)"],["claude-haiku-5-5","Haiku (rápido, mais barato)"]].map(([k,n])=>`<option value="${k}" ${k===S.cfg.modelo?"selected":""}>${n}</option>`).join("")}</select></div></div>
+   <div class="right" style="justify-content:flex-start"><button class="btn sm" id="cfgSalvar">Salvar chave</button>${S.cfg.apiKey?'<button class="btn ghost sm" id="cfgLimpar">Remover chave</button>':""}<a class="btn ghost sm" href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">Criar chave ↗</a></div>
    <h3>Apresentação</h3><button class="btn sec sm" onclick="abrirBoasVindas()">Rever tela de boas-vindas</button>
    <h3>Zona de perigo</h3><button class="btn danger sm" onclick="confirmar('Apagar TODOS os dados deste navegador? Faça backup antes.',()=>{S=vazio();salvar();render();toast('Dados apagados');})">Apagar todos os dados</button>
   </div></div>`;
 }
 function posConfig(){
+  $("#cfgSalvar").onclick=()=>{ S.cfg.apiKey=$("#cfgKey").value.trim(); S.cfg.modelo=$("#cfgMod").value; salvar(); render(); toast(S.cfg.apiKey?"Chave salva — a IA agora roda dentro do site":"Chave removida"); };
+  const lp=$("#cfgLimpar"); if(lp) lp.onclick=()=>{ S.cfg.apiKey=""; salvar(); render(); toast("Chave removida"); };
   const dump=()=>JSON.stringify({app:"LicitaRadar",versao:VERSAO,exportadoEm:new Date().toISOString(),dados:S},null,1);
   $("#bExp").onclick=()=>baixar(`licitaradar-backup-${new Date().toISOString().slice(0,10)}.json`,dump(),"application/json");
   $("#bCop").onclick=()=>copiar(dump());

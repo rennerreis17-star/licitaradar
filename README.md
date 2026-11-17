@@ -19,7 +19,8 @@ Painel de licitações públicas (Lei 14.133/2021): cadastro da empresa pelo CNP
 
 No arquivo `.github/workflows/atualizar.yml`:
 - `DIAS`: quantos dias à frente buscar encerramentos (padrão 60).
-- `MINUTOS`: tempo máximo de coleta (padrão 45).
+- `MINUTOS`: tempo máximo da coleta de licitações (padrão 38).
+- `MINUTOS_CONTRATOS`: tempo máximo da coleta de contratos para a página Mercado (padrão 18).
 - Para mudar as modalidades, adicione `MODALIDADES: "6,8,4"` (6 Pregão Eletrônico, 8 Dispensa, 4 Concorrência Eletrônica, 7 Pregão Presencial, 5 Concorrência Presencial, 12 Credenciamento).
 
 > As minutas geradas pela IA devem ser revisadas por advogado ou pelo responsável antes do protocolo.

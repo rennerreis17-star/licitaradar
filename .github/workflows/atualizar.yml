@@ -21,7 +21,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 70
+    timeout-minutes: 75
     steps:
       - uses: actions/checkout@v4
 
@@ -34,8 +34,15 @@ jobs:
         continue-on-error: true
         env:
           DIAS: "60"
-          MINUTOS: "45"
+          MINUTOS: "38"
         run: python scripts/coletar_pncp.py
+
+      - name: Coletar contratos assinados (página Mercado)
+        if: github.event_name != 'push'
+        continue-on-error: true
+        env:
+          MINUTOS_CONTRATOS: "18"
+        run: python scripts/coletar_contratos.py
 
       - name: Salvar a base no repositório
         if: github.event_name != 'push'
